@@ -28,7 +28,7 @@ _En cualquiera de los siguientes comandos, reemplazar `<bin>` por `part1` o `par
     ```
 -   Para compilar **y correr** el proyecto:
     ```bash
-    $ cargo run [--bin <bin>] [--release]
+    $ cargo run --bin <bin> [--release]
     ```
 -   Para correr las **pruebas unitarias**:
     ```bash
