@@ -1,0 +1,5 @@
+[hooks]
+pre-commit = "bash ./hooks/pre-commit TP1"
+
+[logging]
+verbose = true

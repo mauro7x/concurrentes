@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# Constants
+CHECK_CHAR='\xE2\x9C\x93'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+# Special chars
+CHECK="${GREEN}${CHECK_CHAR}${NC}"
+
+# -----------------------------------------------------------------------------
+cd $1
+
+cargo clean
+echo ""
+
+echo -n "> Running cargo fmt... "
+if result=$(cargo fmt 2>&1); then
+	echo -e "${CHECK}"
+else
+  echo -e "${RED}failed. See output:${NC}"; printf "\n"
+  echo -n "${result}"; echo ""; exit 1
+fi
+
+echo -n "> Running cargo check... "
+if result=$(cargo check --color always 2>&1); then
+	echo -e "${CHECK}"
+else
+  echo -e "${RED}failed. See output:${NC}"; printf "\n"
+  echo -n "${result}"; echo ""; exit 1
+fi
+
+echo -n "> Running cargo clippy... "
+if result=$(cargo clippy --color always -- -D warnings 2>&1); then
+	echo -e "${CHECK}"
+else
+  echo -e "${RED}failed. See output:${NC}"; printf "\n"
+  echo -n "${result}"; echo ""; exit 1
+fi
+
+echo -n "> Running tests... "
+if result=$(cargo test --color always 2>&1); then
+	echo -e "${CHECK}"
+else
+  echo -e "${RED}failed. See output:${NC}"; printf "\n"
+  echo -n "${result}"; echo ""; exit 1
+fi
+
+echo ""
+exit 0
