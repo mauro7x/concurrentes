@@ -4,6 +4,7 @@ Description.
 
 ## Related issues
 
-Optionally, link issues. e.g.:
+**(Remember to delete this section if it is not necessary)**
+Optionally, link issues.
 
-Resolves #23
+e.g.: Resolves #23
