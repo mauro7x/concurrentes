@@ -1,12 +1,6 @@
 name: TP1
 
 on:
-    push:
-        branches:
-            - '*' # matches every branch that doesn't contain a '/'
-            - '*/*' # matches every branch containing a single '/'
-            - '**' # matches every branch
-            - '!master' # excludes master
     pull_request:
         branches: [main]
 
@@ -28,20 +22,3 @@ jobs:
 
             - name: Run clippy
               run: cargo clippy --verbose -- -D warnings
-
-    test:
-        runs-on: ubuntu-latest
-
-        needs: [lint]
-
-        defaults:
-            run:
-                working-directory: ./TP1
-        steps:
-            - uses: actions/checkout@v2
-
-            - name: Build
-              run: cargo build --verbose
-
-            - name: Run tests
-              run: cargo test --verbose

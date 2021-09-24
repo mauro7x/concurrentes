@@ -39,13 +39,15 @@ else
   echo -n "${result}"; echo ""; exit 1
 fi
 
-echo -n "> Running tests... "
-if result=$(cargo test --color always 2>&1); then
-	echo -e "${CHECK}"
-else
-  echo -e "${RED}failed. See output:${NC}"; printf "\n"
-  echo -n "${result}"; echo ""; exit 1
-fi
+# We should enable this if we write unit tests:
+
+# echo -n "> Running tests... "
+# if result=$(cargo test --color always 2>&1); then
+# 	echo -e "${CHECK}"
+# else
+#   echo -e "${RED}failed. See output:${NC}"; printf "\n"
+#   echo -n "${result}"; echo ""; exit 1
+# fi
 
 echo ""
 exit 0
