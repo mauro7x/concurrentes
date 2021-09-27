@@ -1,0 +1,31 @@
+origin,destiny,airline,package
+MAD,CDG,Delta Air Lines,0
+MAD,GRU,Delta Air Lines,1
+FCO,GRU,Delta Air Lines,1
+CDG,JFK,Delta Air Lines,0
+MAD,EZE,Delta Air Lines,1
+EZE,JFK,Delta Air Lines,0
+MAD,JFK,Delta Air Lines,1
+FCO,CDG,Delta Air Lines,0
+GRU,FCO,American Airlines,0
+JFK,MAD,American Airlines,0
+GRU,EZE,American Airlines,1
+CDG,JFK,American Airlines,0
+GRU,MAD,American Airlines,1
+GRU,JFK,American Airlines,0
+CDG,FCO,American Airlines,1
+MAD,JFK,American Airlines,1
+JFK,FCO,Aerolineas Argentinas,1
+MAD,CDG,Iberia,1
+FCO,MAD,Iberia,0
+CDG,FCO,Delta Air Lines,0
+CDG,EZE,Aerolineas Argentinas,0
+JFK,MAD,Delta Air Lines,0
+JFK,GRU,American Airlines,1
+CDG,EZE,LATAM,0
+JFK,EZE,LATAM,0
+MAD,EZE,LATAM,1
+EZE,GRU,LATAM,1
+FCO,EZE,LATAM,1
+CDG,GRU,LATAM,1
+MAD,GRU,LATAM,1
