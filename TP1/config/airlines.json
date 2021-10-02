@@ -1,0 +1,32 @@
+[
+	{
+		"name": "LATAM",
+		"rate_limit": 3,
+		"failure_rate": 0.2,
+		"retry_time": 5
+	},
+	{
+		"name": "Aerolineas Argentinas",
+		"rate_limit": 3,
+		"failure_rate": 0.2,
+		"retry_time": 5
+	},
+	{
+		"name": "Iberia",
+		"rate_limit": 3,
+		"failure_rate": 0.2,
+		"retry_time": 5
+	},
+	{
+		"name": "American Airlines",
+		"rate_limit": 3,
+		"failure_rate": 0.2,
+		"retry_time": 5
+	},
+	{
+		"name": "Delta Air Lines",
+		"rate_limit": 3,
+		"failure_rate": 0.2,
+		"retry_time": 5
+	}
+]
