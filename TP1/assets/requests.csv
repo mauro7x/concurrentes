@@ -1,0 +1,31 @@
+origin,destiny,airline,package
+MAD,CDG,Delta Air Lines,false
+MAD,GRU,Delta Air Lines,true
+FCO,GRU,Delta Air Lines,true
+CDG,JFK,Delta Air Lines,false
+MAD,EZE,Delta Air Lines,true
+EZE,JFK,Delta Air Lines,false
+MAD,JFK,Delta Air Lines,true
+FCO,CDG,Delta Air Lines,false
+GRU,FCO,American Airlines,false
+JFK,MAD,American Airlines,false
+GRU,EZE,American Airlines,true
+CDG,JFK,American Airlines,false
+GRU,MAD,American Airlines,true
+GRU,JFK,American Airlines,false
+CDG,FCO,American Airlines,true
+MAD,JFK,American Airlines,true
+JFK,FCO,Aerolineas Argentinas,true
+MAD,CDG,Iberia,true
+FCO,MAD,Iberia,false
+CDG,FCO,Delta Air Lines,false
+CDG,EZE,Aerolineas Argentinas,false
+JFK,MAD,Delta Air Lines,false
+JFK,GRU,American Airlines,true
+CDG,EZE,LATAM,false
+JFK,EZE,LATAM,false
+MAD,EZE,LATAM,true
+EZE,GRU,LATAM,true
+FCO,EZE,LATAM,true
+CDG,GRU,LATAM,true
+MAD,GRU,LATAM,true

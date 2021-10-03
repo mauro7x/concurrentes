@@ -1,0 +1,6 @@
+{
+	"name": "Hotel",
+	"rate_limit": 5,
+	"failure_rate": 0.0,
+	"retry_time": 3
+}

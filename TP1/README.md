@@ -47,6 +47,10 @@ _En cualquiera de los siguientes comandos, reemplazar `<bin>` por `part1` o `par
     $ cargo clean
     ```
 
+### Configuración
+
+Pueden configurarse las **aerolineas** y el **hotel** desde los archivos de configuración (`config/`) libremente.
+
 ## Documentación :books:
 
 A continuación se lista documentación relevante (disponible en nuestra sección [`/docs`](./docs)).
