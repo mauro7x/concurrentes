@@ -45,7 +45,7 @@ fn handler(req_id: u32, airline: Airline, mut hotel: Option<Hotel>, logger_sende
 impl RequestHandler {
     pub fn new(airlines: Airlines, hotel: Hotel, logger_sender: LoggerSender) -> Self {
         RequestHandler {
-            logger_sender: logger_sender,
+            logger_sender,
             threads: Vec::new(),
             next_id: 0,
             airlines,

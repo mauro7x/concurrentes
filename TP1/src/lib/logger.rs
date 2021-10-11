@@ -39,15 +39,15 @@ impl Logger {
 
         let logger = Logger {
             handler: join_handler,
-            tx: tx,
+            tx,
         };
 
         Ok(logger)
     }
     pub fn get_sender(&self) -> LoggerSender {
-        return LoggerSender {
+        LoggerSender {
             tx: self.tx.clone(),
-        };
+        }
     }
     pub fn close(self) {
         drop(self.tx);
