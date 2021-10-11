@@ -3,6 +3,7 @@ use std::thread::{self, JoinHandle};
 use crate::{
     airlines::{Airline, Airlines},
     hotel::Hotel,
+    logger::LoggerSender,
     request::Request,
     utils::*,
 };
@@ -10,15 +11,16 @@ use crate::{
 pub struct InvalidRequest;
 
 pub struct RequestHandler {
+    logger_sender: LoggerSender,
     threads: Vec<JoinHandle<()>>,
     next_id: u32,
     airlines: Airlines,
     hotel: Hotel,
 }
 
-fn handler(req_id: u32, airline: Airline, mut hotel: Option<Hotel>) {
+fn handler(req_id: u32, airline: Airline, mut hotel: Option<Hotel>, logger_sender: LoggerSender) {
     let ts_start = now();
-    println!("[REQ #{}] -- START --", req_id);
+    logger_sender.send(format!("[REQ #{}] -- START --", req_id));
 
     let hotel_thread: Option<JoinHandle<u32>> = hotel
         .take()
@@ -34,15 +36,16 @@ fn handler(req_id: u32, airline: Airline, mut hotel: Option<Hotel>) {
 
     let ts_stop = now();
     let duration_ms = ts_stop - ts_start;
-    println!(
+    logger_sender.send(format!(
         "[REQ #{}] -- FINISHED -- (time: {} ms, retries: {})",
         req_id, duration_ms, retries
-    );
+    ));
 }
 
 impl RequestHandler {
-    pub fn new(airlines: Airlines, hotel: Hotel) -> Self {
+    pub fn new(airlines: Airlines, hotel: Hotel, logger_sender: LoggerSender) -> Self {
         RequestHandler {
+            logger_sender: logger_sender,
             threads: Vec::new(),
             next_id: 0,
             airlines,
@@ -60,7 +63,9 @@ impl RequestHandler {
         };
 
         let req_id = self.next_id;
-        let join_handler = thread::spawn(move || handler(req_id, airline_cln, hotel_cln));
+        let logger_sender = self.logger_sender.clone();
+        let join_handler =
+            thread::spawn(move || handler(req_id, airline_cln, hotel_cln, logger_sender));
         self.threads.push(join_handler);
         self.next_id += 1;
 
@@ -70,10 +75,10 @@ impl RequestHandler {
     pub fn join(mut self) {
         for join_handler in self.threads {
             if let Err(err) = join_handler.join() {
-                println!(
+                self.logger_sender.send(format!(
                     "[WARNING] Error while joining RequestHandler. Error: {:?}",
                     err
-                )
+                ))
             }
         }
 
