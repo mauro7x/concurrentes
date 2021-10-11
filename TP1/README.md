@@ -49,7 +49,7 @@ _En cualquiera de los siguientes comandos, reemplazar `<bin>` por `part1` o `par
 
 ### Configuración
 
-Pueden configurarse los principales parámetros del sistema así como las **aerolineas** y el **hotel** desde los archivos de configuración (`/config`).
+Pueden configurarse los principales parámetros del sistema así como las **aerolineas** y el **hotel** desde los archivos de configuración ([`/config`](./config)).
 
 ## Documentación :books:
 
