@@ -11,7 +11,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     dispatcher::from_path(paths::REQUESTS, &mut req_handler)?;
 
     req_handler.join();
-    logger.close();
+    logger.join();
     Ok(())
 }
 

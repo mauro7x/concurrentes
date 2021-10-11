@@ -7,7 +7,7 @@ use crate::{
 };
 
 pub type Airline = WebService;
-pub type Airlines = HashMap<String, WebService>;
+pub type Airlines = HashMap<String, Airline>;
 
 pub fn from_path(path: &str, logger_sender: LoggerSender) -> Result<Airlines, Box<dyn Error>> {
     let mut content = Airlines::new();

@@ -1,10 +1,11 @@
-use std::error::Error;
-use std::fs::OpenOptions;
-use std::io::Write;
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::thread::{spawn, JoinHandle};
-
 use crate::config::GeneralConfig;
+use std::{
+    error::Error,
+    fs::{File, OpenOptions},
+    io::Write,
+    sync::mpsc::{channel, Receiver, Sender},
+    thread::{spawn, JoinHandle},
+};
 
 pub struct Logger {
     handler: JoinHandle<()>,
@@ -20,7 +21,7 @@ impl Logger {
         let data = std::fs::read_to_string(path)?;
         let config: GeneralConfig = serde_json::from_str(&data)?;
 
-        let mut file = OpenOptions::new()
+        let file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(config.logger_path)
@@ -28,14 +29,7 @@ impl Logger {
 
         let (tx, rx): (Sender<String>, Receiver<String>) = channel();
 
-        let join_handler = spawn(move || {
-            while let Ok(msg) = rx.recv() {
-                let c = msg.clone() + "\n";
-                print!("{}", c);
-                file.write_all(c.as_bytes())
-                    .expect("[CRITICAL] Write to file failed");
-            }
-        });
+        let join_handler = spawn(move || Logger::write_to_log(rx, file));
 
         let logger = Logger {
             handler: join_handler,
@@ -44,14 +38,24 @@ impl Logger {
 
         Ok(logger)
     }
+    fn write_to_log(rx: Receiver<String>, mut file: File) {
+        while let Ok(msg) = rx.recv() {
+            let c = msg.clone() + "\n";
+            print!("{}", c);
+            file.write_all(c.as_bytes())
+                .expect("[CRITICAL] Write to file failed");
+        }
+    }
     pub fn get_sender(&self) -> LoggerSender {
         LoggerSender {
             tx: self.tx.clone(),
         }
     }
-    pub fn close(self) {
+    pub fn join(self) {
         drop(self.tx);
-        let _ret = self.handler.join();
+        self.handler
+            .join()
+            .expect("[CRITICAL] Error joining logger thread");
     }
 }
 
