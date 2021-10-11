@@ -1,14 +1,15 @@
-use std::{collections::HashMap, error::Error, sync::Arc};
+use std::{collections::HashMap, error::Error};
 
 use crate::{
     config::{AirlineConfig, AirlinesConfig},
+    logger::LoggerSender,
     webservice::WebService,
 };
 
-pub type Airline = Arc<WebService>;
+pub type Airline = WebService;
 pub type Airlines = HashMap<String, Airline>;
 
-pub fn from_path(path: &str) -> Result<Airlines, Box<dyn Error>> {
+pub fn from_path(path: &str, logger_sender: LoggerSender) -> Result<Airlines, Box<dyn Error>> {
     let mut content = Airlines::new();
 
     let data = std::fs::read_to_string(path)?;
@@ -23,7 +24,13 @@ pub fn from_path(path: &str) -> Result<Airlines, Box<dyn Error>> {
     {
         content.insert(
             name.clone(),
-            Arc::new(WebService::new(name, rate_limit, failure_rate, retry_time)),
+            WebService::new(
+                name,
+                rate_limit,
+                failure_rate,
+                retry_time,
+                logger_sender.clone(),
+            ),
         );
     }
 

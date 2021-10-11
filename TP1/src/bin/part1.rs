@@ -1,16 +1,17 @@
 use std::{error::Error, process};
 
-use lib::{airlines, dispatcher, hotel, paths, request_handler::RequestHandler};
+use lib::{airlines, dispatcher, hotel, logger, paths, request_handler::RequestHandler};
 
 fn run() -> Result<(), Box<dyn Error>> {
-    let airlines = airlines::from_path(paths::AIRLINES_CONFIG)?;
-    let hotel = hotel::from_path(paths::HOTEL_CONFIG)?;
-    let mut req_handler = RequestHandler::new(airlines, hotel);
+    let logger = logger::Logger::from_path(paths::GENERAL)?;
+    let airlines = airlines::from_path(paths::AIRLINES_CONFIG, logger.get_sender())?;
+    let hotel = hotel::from_path(paths::HOTEL_CONFIG, logger.get_sender())?;
+    let mut req_handler = RequestHandler::new(airlines, hotel, logger.get_sender());
 
     dispatcher::from_path(paths::REQUESTS, &mut req_handler)?;
 
     req_handler.join();
-
+    logger.join();
     Ok(())
 }
 
