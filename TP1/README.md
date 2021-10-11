@@ -49,11 +49,11 @@ _En cualquiera de los siguientes comandos, reemplazar `<bin>` por `part1` o `par
 
 ### Configuración
 
-Pueden configurarse las **aerolineas** y el **hotel** desde los archivos de configuración (`config/`) libremente.
+Pueden configurarse los principales parámetros del sistema así como las **aerolineas** y el **hotel** desde los archivos de configuración ([`/config`](./config)).
 
 ## Documentación :books:
 
 A continuación se lista documentación relevante (disponible en nuestra sección [`/docs`](./docs)).
 
 -   [Enunciado](./docs/Enunciado.md).
--   Informe. _TODO_
+-   Informe: pdf (WIP) - [overleaf (lectura)](https://es.overleaf.com/read/jcbzxvndgwkm) - [overleaf (edición)](https://es.overleaf.com/6759942824nmrwbpvwvndm)
