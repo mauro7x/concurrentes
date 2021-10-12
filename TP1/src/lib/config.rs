@@ -7,9 +7,15 @@ pub struct WebServiceConfig {
     pub failure_rate: f64,
     pub retry_time: u64,
 }
+
 #[derive(Debug, Deserialize)]
 pub struct GeneralConfig {
-    pub logger_path: String,
+    pub logger_config: LoggerConfig,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LoggerConfig {
+    pub path: String,
 }
 
 pub type HotelConfig = WebServiceConfig;

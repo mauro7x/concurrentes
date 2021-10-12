@@ -1,4 +1,5 @@
-use crate::config::GeneralConfig;
+use crate::config::LoggerConfig;
+
 use std::{
     error::Error,
     fs::{File, OpenOptions},
@@ -17,14 +18,11 @@ pub struct LoggerSender {
 }
 
 impl Logger {
-    pub fn from_path(path: &str) -> Result<Logger, Box<dyn Error>> {
-        let data = std::fs::read_to_string(path)?;
-        let config: GeneralConfig = serde_json::from_str(&data)?;
-
+    pub fn from_config(config: &LoggerConfig) -> Result<Logger, Box<dyn Error>> {
         let file = OpenOptions::new()
             .create(true)
             .append(true)
-            .open(config.logger_path)
+            .open(&config.path)
             .expect("[CRITICAL] Cannot open file");
 
         let (tx, rx): (Sender<String>, Receiver<String>) = channel();
