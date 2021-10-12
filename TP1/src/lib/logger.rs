@@ -18,7 +18,7 @@ pub struct LoggerSender {
 }
 
 impl Logger {
-    pub fn from_config(config: &LoggerConfig) -> Result<Logger, Box<dyn Error>> {
+    pub fn from_config(config: LoggerConfig) -> Result<Logger, Box<dyn Error>> {
         let file = OpenOptions::new()
             .create(true)
             .append(true)
