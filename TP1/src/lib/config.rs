@@ -4,11 +4,18 @@ use std::error::Error;
 #[derive(Debug, Deserialize)]
 pub struct GeneralConfig {
     pub logger_config: LoggerConfig,
+    pub metrics_collector_config: MetricsCollectorConfig,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct LoggerConfig {
     pub path: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MetricsCollectorConfig {
+    pub printer_period: u64,
+    pub n_most_booked: usize,
 }
 
 #[derive(Debug, Deserialize)]
