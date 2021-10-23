@@ -1,9 +1,9 @@
 {
-    "logger_config": {
-        "path": "./logger.txt"
-    },
-    "metrics_collector_config": {
-        "printer_period": 5000,
-        "n_most_booked": 10
-    }
+	"logger_config": {
+		"path": "./logger.txt"
+	},
+	"metrics_collector_config": {
+		"printer_period": 5000,
+		"n_most_booked": 3
+	}
 }
