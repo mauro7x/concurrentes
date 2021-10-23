@@ -12,7 +12,6 @@ CHECK="${GREEN}${CHECK_CHAR}${NC}"
 # -----------------------------------------------------------------------------
 cd $1
 
-cargo clean
 echo ""
 
 echo -n "> Running cargo fmt... "
