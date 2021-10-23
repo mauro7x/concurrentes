@@ -4,6 +4,7 @@ use crate::{
     airlines::{Airline, Airlines},
     hotel::Hotel,
     logger::LoggerSender,
+    metrics_collector::MetricsSender,
     request::Request,
     utils::*,
 };
@@ -12,13 +13,21 @@ pub struct InvalidRequest;
 
 pub struct RequestHandler {
     logger_sender: LoggerSender,
+    metrics_sender: MetricsSender,
     threads: Vec<JoinHandle<()>>,
     next_id: u32,
     airlines: Airlines,
     hotel: Hotel,
 }
 
-fn handler(req_id: u32, airline: Airline, mut hotel: Option<Hotel>, logger_sender: LoggerSender) {
+fn handler(
+    req_id: u32,
+    airline: Airline,
+    mut hotel: Option<Hotel>,
+    req: Request,
+    logger_sender: LoggerSender,
+    metrics_sender: MetricsSender,
+) {
     let ts_start = now();
     logger_sender.send(format!("[REQ #{}] -- START --", req_id));
 
@@ -40,12 +49,19 @@ fn handler(req_id: u32, airline: Airline, mut hotel: Option<Hotel>, logger_sende
         "[REQ #{}] -- FINISHED -- (time: {} ms, retries: {})",
         req_id, duration_ms, retries
     ));
+    metrics_sender.send(req, duration_ms);
 }
 
 impl RequestHandler {
-    pub fn new(airlines: Airlines, hotel: Hotel, logger_sender: LoggerSender) -> Self {
+    pub fn new(
+        airlines: Airlines,
+        hotel: Hotel,
+        logger_sender: LoggerSender,
+        metrics_sender: MetricsSender,
+    ) -> Self {
         RequestHandler {
             logger_sender,
+            metrics_sender,
             threads: Vec::new(),
             next_id: 0,
             airlines,
@@ -53,7 +69,7 @@ impl RequestHandler {
         }
     }
 
-    pub fn handle(&mut self, req: &Request) -> Result<(), InvalidRequest> {
+    pub fn handle(&mut self, req: Request) -> Result<(), InvalidRequest> {
         let airline = self.airlines.get(&req.airline).ok_or(InvalidRequest)?;
 
         let airline_cln = airline.clone();
@@ -64,8 +80,17 @@ impl RequestHandler {
 
         let req_id = self.next_id;
         let logger_sender = self.logger_sender.clone();
-        let join_handler =
-            thread::spawn(move || handler(req_id, airline_cln, hotel_cln, logger_sender));
+        let metrics_sender = self.metrics_sender.clone();
+        let join_handler = thread::spawn(move || {
+            handler(
+                req_id,
+                airline_cln,
+                hotel_cln,
+                req,
+                logger_sender,
+                metrics_sender,
+            )
+        });
         self.threads.push(join_handler);
         self.next_id += 1;
 
