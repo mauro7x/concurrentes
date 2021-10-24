@@ -10,6 +10,7 @@ name = "lib"
 path = "src/lib/lib.rs"
 
 [dependencies]
+actix = "0.10"
 actix-web = "3"
 chrono = "0.4"
 csv = "1.1"
