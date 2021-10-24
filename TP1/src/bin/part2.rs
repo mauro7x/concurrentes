@@ -1,23 +1,17 @@
-use actix::{Actor, Addr};
+use actix::Addr;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 
-use lib::part2::tests::{Mensajito, MyActor};
+use lib::part2::{
+    airlines,
+    dispatcher::{HandleBook, WebServiceDispatcher},
+};
+use lib::{paths, request::Request};
+
+use std::collections::HashMap;
 
 struct AppState {
-    app_name: String,
-    my_actor: Addr<MyActor>,
-}
-
-// Temp
-#[get("/test")]
-async fn test(data: web::Data<AppState>) -> String {
-    let app_name = &data.app_name; // <- get app_name
-    let addr = &data.my_actor;
-
-    let msg = Mensajito { id: 34 };
-    addr.try_send(msg).unwrap();
-
-    format!("Hello {}!", app_name) // <- response with app_name
+    airlines: HashMap<String, Addr<WebServiceDispatcher>>,
+    req_id: u64,
 }
 
 #[get("/")]
@@ -26,8 +20,24 @@ async fn index() -> impl Responder {
 }
 
 #[post("/request")]
-async fn book() -> impl Responder {
-    HttpResponse::Ok().body("Eventualmente un ID de request")
+async fn book(req: web::Json<Request>, data: web::Data<AppState>) -> impl Responder {
+    let airlines = &data.airlines;
+    let req_id = data.req_id;
+
+    println!("[REQ] {:#?}", req);
+    match airlines.get(&req.airline) {
+        Some(airline_dispatcher) => {
+            let msg = HandleBook {
+                req_id: data.req_id,
+            };
+            airline_dispatcher.try_send(msg); // TODO handle result incorrect
+        }
+        None => {
+            println!("Airline {} does not exist", &req.airline)
+            // TODO Error response
+        }
+    }
+    HttpResponse::Ok().body(format!("Request id: {}", req_id))
 }
 
 #[get("/request")]
@@ -38,15 +48,16 @@ async fn status() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let addr = MyActor::default().start();
+    let airlines = airlines::from_path(paths::AIRLINES_CONFIG).expect("[CRITICAL]");
 
     HttpServer::new(move || {
+        let airlines_cln = airlines.clone();
+
         App::new()
             .data(AppState {
-                app_name: String::from("Actix-web"),
-                my_actor: addr.clone(),
+                req_id: 0,
+                airlines: airlines_cln,
             })
-            .service(test)
             .service(index)
             .service(book)
             .service(status)
