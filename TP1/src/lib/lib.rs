@@ -12,6 +12,9 @@ pub mod paths;
 pub mod request;
 pub mod request_handler;
 
+// Actors
+pub mod actors;
+
 // Private
 mod fetch;
 mod utils;
