@@ -5,9 +5,10 @@ use lib::{
     actors::airlines::Airlines,
     actors::{
         airlines,
-        logger::{LogMessage, Logger},
+        logger::{from_config, LogMessage, Logger},
         request::{IncommingRequest, SystemRequest},
     },
+    config::GeneralConfig,
     paths,
 };
 
@@ -62,11 +63,16 @@ impl Handler<IncommingRequest> for RequestHandler {
 }
 fn main() {
     let system = System::new();
+    let GeneralConfig { logger_config } =
+        GeneralConfig::from_path(paths::GENERAL).expect("[CRITICAL] GlobalConfig error");
+
     let _addr = system.block_on(async {
-        let logger_addr = Logger {}.start();
+        let logger_addr = from_config(logger_config)
+            .expect("[CRITICAL] Logger initialization error")
+            .start();
 
         let airlines = airlines::from_path(paths::AIRLINES_CONFIG, logger_addr.clone())
-            .expect("Error al inicializar aerloineas");
+            .expect("[CRITICAL] Airlines initialization error");
 
         let req_handler_addr = RequestHandler {
             next_id: 0,
