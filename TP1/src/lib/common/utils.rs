@@ -11,3 +11,7 @@ pub fn sleep(secs: u64) {
     let duration = time::Duration::from_secs(secs);
     thread::sleep(duration);
 }
+
+pub fn clean_screen() {
+    print!("{}[2J", 27 as char);
+}

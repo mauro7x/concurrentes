@@ -2,10 +2,8 @@ use std::{collections::HashMap, error::Error};
 
 use actix::{Actor, Addr, Context, Handler};
 
-use crate::{
-    actors::logger::{LogMessage, Logger},
-    config::{AirlineConfig, AirlinesConfig},
-};
+use crate::actors::logger::{LogMessage, Logger};
+use crate::common::config::{AirlineConfig, AirlinesConfig};
 
 use super::request::SystemRequest;
 

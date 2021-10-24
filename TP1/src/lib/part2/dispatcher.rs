@@ -8,20 +8,27 @@ pub struct WebServiceDispatcher {
     name: String,
     rate_limit: isize,
     pending_reqs: VecDeque<u64>,
+    retry_time: u64,
     service: Addr<WebService>,
 }
 
 impl WebServiceDispatcher {
-    pub fn new(service: Addr<WebService>, name: String, rate_limit: isize) -> Self {
+    pub fn new(
+        service: Addr<WebService>,
+        name: String,
+        rate_limit: isize,
+        retry_time: u64,
+    ) -> Self {
         WebServiceDispatcher {
             name,
             pending_reqs: VecDeque::new(),
             rate_limit,
+            retry_time,
             service,
         }
     }
 
-    fn sendAllPossibleRequests(&mut self, ctx: &mut Context<Self>) {
+    fn send_all_possible_requests(&mut self, ctx: &mut Context<Self>) {
         while self.rate_limit > 0 && !self.pending_reqs.is_empty() {
             let req_id;
             match self.pending_reqs.pop_front() {
@@ -78,7 +85,7 @@ impl Handler<HandleBook> for WebServiceDispatcher {
         );
 
         self.pending_reqs.push_back(msg.req_id);
-        self.sendAllPossibleRequests(ctx);
+        self.send_all_possible_requests(ctx);
     }
 }
 
@@ -103,6 +110,7 @@ impl Handler<BookFailed> for WebServiceDispatcher {
             "[{} WebServiceDispatcher] book failed msg received id: {}",
             self.name, msg.req_id
         );
+        // TODO: Handle retry_time
         self.rate_limit += 1;
         ctx.address().try_send(HandleBook { req_id: msg.req_id });
     }

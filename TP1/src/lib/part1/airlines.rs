@@ -1,10 +1,7 @@
 use std::{collections::HashMap, error::Error};
 
-use crate::{
-    config::{AirlineConfig, AirlinesConfig},
-    logger::LoggerSender,
-    webservice::WebService,
-};
+use crate::common::config::{AirlineConfig, AirlinesConfig};
+use crate::part1::{logger::LoggerSender, webservice::WebService};
 
 pub type Airline = WebService;
 pub type Airlines = HashMap<String, Airline>;

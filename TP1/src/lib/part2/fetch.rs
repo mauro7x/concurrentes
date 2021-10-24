@@ -1,7 +1,5 @@
 use rand::Rng;
 
-use crate::utils::*;
-
 pub struct FetchError;
 
 pub fn simulate_fetch(failure_rate: f64) -> Result<(), FetchError> {

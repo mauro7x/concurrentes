@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use std_semaphore::Semaphore;
 
-use crate::{fetch::*, logger::LoggerSender, utils::*};
+use crate::common::utils::*;
+use crate::part1::{fetch::*, logger::LoggerSender};
 
 #[derive(Clone)]
 pub struct WebService {

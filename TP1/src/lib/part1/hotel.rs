@@ -1,6 +1,7 @@
 use std::error::Error;
 
-use crate::{config::HotelConfig, logger::LoggerSender, webservice::WebService};
+use crate::common::config::HotelConfig;
+use crate::part1::{logger::LoggerSender, webservice::WebService};
 
 pub type Hotel = WebService;
 

@@ -1,6 +1,6 @@
 use rand::Rng;
 
-use crate::utils::*;
+use crate::common::utils::*;
 
 pub struct FetchError;
 

@@ -1,8 +1,9 @@
 use std::{error::Error, process};
 
-use lib::{
-    airlines, config::GeneralConfig, dispatcher, hotel, logger, metrics_collector, paths,
-    request_handler::RequestHandler,
+use lib::common::{config::GeneralConfig, paths};
+
+use lib::part1::{
+    airlines, dispatcher, hotel, logger, metrics_collector, request_handler::RequestHandler,
 };
 
 fn run() -> Result<(), Box<dyn Error>> {
