@@ -1,11 +1,12 @@
 use std::thread::{self, JoinHandle};
 
-use crate::common::{request::Request, utils::*};
+use crate::common::utils::*;
 use crate::part1::{
     airlines::{Airline, Airlines},
     hotel::Hotel,
     logger::LoggerSender,
     metrics_collector::MetricsSender,
+    request::Request,
 };
 
 pub struct InvalidRequest;

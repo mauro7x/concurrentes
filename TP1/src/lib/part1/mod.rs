@@ -8,4 +8,5 @@ pub mod request_handler;
 
 // Private
 mod fetch;
+mod request;
 mod webservice;

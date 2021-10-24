@@ -1,7 +1,5 @@
-use crate::common::{
-    config::MetricsCollectorConfig,
-    request::{Request, RequestDuration},
-};
+use crate::common::config::MetricsCollectorConfig;
+use crate::part1::request::{Request, RequestDuration};
 
 use std::{
     collections::HashMap,

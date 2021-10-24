@@ -1,8 +1,9 @@
-use actix::{Actor, Addr, AsyncContext, Context, Handler, Message};
+use actix::{Actor, Addr, Context, Handler, Message};
 
 use crate::part2::{
     dispatcher::{BookFailed, BookSucceeded, WebServiceDispatcher},
     fetch,
+    request::Request,
 };
 pub struct WebService {
     pub name: String,
@@ -45,7 +46,7 @@ impl Actor for WebService {
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct Book {
-    pub req_id: u64,
+    pub req: Request,
     pub requester: Addr<WebServiceDispatcher>,
 }
 
@@ -58,16 +59,16 @@ impl Handler<Book> for WebService {
             Ok(_) => {
                 println!(
                     "[{} WebService] REQ {} Fetch succeeded...",
-                    self.name, msg.req_id
+                    self.name, msg.req.id
                 );
-                msg.requester.try_send(BookSucceeded { req_id: msg.req_id });
+                msg.requester.try_send(BookSucceeded {});
             }
             Err(_) => {
                 println!(
                     "[{} WebService] REQ {} Fetch failed...",
-                    self.name, msg.req_id
+                    self.name, msg.req.id
                 );
-                msg.requester.try_send(BookFailed { req_id: msg.req_id });
+                msg.requester.try_send(BookFailed { req: msg.req });
             }
         }
     }

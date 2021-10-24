@@ -1,70 +1,68 @@
-// use actix::Addr;
-// use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix::{Actor, Addr};
+use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 
-// use lib::part2::{
-//     airlines,
-//     dispatcher::{HandleBook, WebServiceDispatcher},
-// };
-// use lib::{paths, request::Request};
+use lib::part2::{
+    errors::*,
+    request::RawRequest,
+    request_handler::{HandleRequest, RequestHandler},
+};
 
-// use std::collections::HashMap;
+struct ServerState {
+    request_handler: Addr<RequestHandler>,
+}
 
-// struct AppState {
-//     airlines: HashMap<String, Addr<WebServiceDispatcher>>,
-//     req_id: u64,
-// }
+#[get("/")]
+async fn index() -> impl Responder {
+    HttpResponse::Ok().body("Index page")
+}
 
-// #[get("/")]
-// async fn index() -> impl Responder {
-//     HttpResponse::Ok().body("Index page")
-// }
+#[post("/request")]
+async fn book(raw_request: web::Json<RawRequest>, state: web::Data<ServerState>) -> impl Responder {
+    let request_handler = &state.request_handler;
+    let msg = HandleRequest {
+        raw_request: raw_request.clone(),
+    };
 
-// #[post("/request")]
-// async fn book(req: web::Json<Request>, data: web::Data<AppState>) -> impl Responder {
-//     let airlines = &data.airlines;
-//     let req_id = data.req_id;
+    match request_handler.send(msg).await {
+        Ok(Ok(req_id)) => HttpResponse::Created().body(req_id),
+        Ok(Err(HandlerError::AirlineNotFound)) => {
+            HttpResponse::NotFound().body(format!("Airline {} not found", raw_request.airline))
+        }
+        Ok(Err(HandlerError::AirlineUnavailable)) => HttpResponse::NotFound().body(format!(
+            "Airline {} not available, try later",
+            raw_request.airline
+        )),
+        Ok(Err(HandlerError::HotelUnavailable)) => {
+            HttpResponse::NotFound().body("Hotel not available, try later")
+        }
+        Err(err) => {
+            HttpResponse::InternalServerError().body(format!("Internal Server Error: {}", err))
+        }
+    }
+}
 
-//     println!("[REQ] {:#?}", req);
-//     match airlines.get(&req.airline) {
-//         Some(airline_dispatcher) => {
-//             let msg = HandleBook {
-//                 req_id: data.req_id,
-//             };
-//             airline_dispatcher.try_send(msg); // TODO handle result incorrect
-//         }
-//         None => {
-//             println!("Airline {} does not exist", &req.airline)
-//             // TODO Error response
-//         }
-//     }
-//     HttpResponse::Ok().body(format!("Request id: {}", req_id))
-// }
+#[get("/request")]
+async fn status() -> impl Responder {
+    // query params?
+    HttpResponse::Ok().body("El status de la request")
+}
 
-// #[get("/request")]
-// async fn status() -> impl Responder {
-//     // query params?
-//     HttpResponse::Ok().body("El status de la request")
-// }
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let port = 8080;
+    let request_handler = RequestHandler::new().start();
 
-// #[actix_web::main]
-// async fn main() -> std::io::Result<()> {
-//     let airlines = airlines::from_path(paths::AIRLINES_CONFIG).expect("[CRITICAL]");
+    let server = HttpServer::new(move || {
+        App::new()
+            .data(ServerState {
+                request_handler: request_handler.clone(),
+            })
+            .service(index)
+            .service(book)
+            .service(status)
+    })
+    .bind(format!("127.0.0.1:{}", port))?;
+    println!("Listening on port {}", port);
 
-//     HttpServer::new(move || {
-//         let airlines_cln = airlines.clone();
-
-//         App::new()
-//             .data(AppState {
-//                 req_id: 0,
-//                 airlines: airlines_cln,
-//             })
-//             .service(index)
-//             .service(book)
-//             .service(status)
-//     })
-//     .bind("127.0.0.1:8080")?
-//     .run()
-//     .await
-// }
-
-fn main() {}
+    server.run().await
+}

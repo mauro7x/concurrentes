@@ -1,7 +1,6 @@
 use std::error::Error;
 
-use crate::common::request::Request;
-use crate::part1::request_handler::RequestHandler;
+use crate::part1::{request::Request, request_handler::RequestHandler};
 
 pub fn from_path(path: &str, req_handler: &mut RequestHandler) -> Result<(), Box<dyn Error>> {
     let mut rdr = csv::Reader::from_path(path)?;

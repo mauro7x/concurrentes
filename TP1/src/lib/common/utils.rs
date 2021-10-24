@@ -1,6 +1,12 @@
 use std::{thread, time};
 
 use chrono::Utc;
+use uuid::Uuid;
+
+pub fn uuid() -> String {
+    let my_uuid = Uuid::new_v4();
+    my_uuid.to_string()
+}
 
 pub fn now() -> i64 {
     let dt = Utc::now();
