@@ -5,7 +5,7 @@ use std::{
 
 use actix::{Actor, Addr, AsyncContext, Context, Handler, Message};
 
-use crate::common::config::LoggerConfig;
+use crate::common::{config::LoggerConfig, utils};
 
 // ACTOR ----------------------------------------------------------------------
 
@@ -15,10 +15,11 @@ pub struct Logger {
 
 impl Logger {
     pub fn new(config: LoggerConfig) -> Self {
+        let path = format!("{}/part2-{}.txt", config.dirpath, utils::now_rfc());
         let file = OpenOptions::new()
             .create(true)
             .append(true)
-            .open(config.path)
+            .open(path)
             .expect("[CRITICAL] Error while opening logger file");
 
         Logger { file }

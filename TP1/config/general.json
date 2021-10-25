@@ -1,6 +1,6 @@
 {
 	"logger_config": {
-		"path": "./logger.txt"
+		"dirpath": "./logs"
 	},
 	"metrics_collector_config": {
 		"printer_period": 5000,

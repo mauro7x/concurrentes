@@ -1,5 +1,3 @@
-use crate::common::config::LoggerConfig;
-
 use std::{
     error::Error,
     fs::{File, OpenOptions},
@@ -7,6 +5,8 @@ use std::{
     sync::mpsc::{channel, Receiver, Sender},
     thread::{spawn, JoinHandle},
 };
+
+use crate::common::{config::LoggerConfig, utils};
 
 pub struct Logger {
     handler: JoinHandle<()>,
@@ -19,11 +19,12 @@ pub struct LoggerSender {
 
 impl Logger {
     pub fn from_config(config: LoggerConfig) -> Result<Logger, Box<dyn Error>> {
+        let path = format!("{}/part1-{}.txt", config.dirpath, utils::now_rfc());
         let file = OpenOptions::new()
             .create(true)
             .append(true)
-            .open(&config.path)
-            .expect("[CRITICAL] Cannot open file");
+            .open(path)
+            .expect("[CRITICAL] Error while opening logger file");
 
         let (tx, rx): (Sender<String>, Receiver<String>) = channel();
 
