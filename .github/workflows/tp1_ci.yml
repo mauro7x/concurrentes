@@ -2,7 +2,10 @@ name: 'TP1 CI'
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+    paths:
+      - TP1/src/**/*
   pull_request:
     branches: [main]
 
