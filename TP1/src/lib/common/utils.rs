@@ -13,6 +13,11 @@ pub fn now() -> i64 {
     dt.timestamp_millis()
 }
 
+pub fn now_rfc() -> String {
+    let dt = Utc::now();
+    dt.to_rfc3339()
+}
+
 pub fn sleep(secs: u64) {
     let duration = time::Duration::from_secs(secs);
     thread::sleep(duration);

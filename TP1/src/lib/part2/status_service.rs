@@ -11,9 +11,9 @@ pub struct RequestNotFound;
 
 #[derive(Clone, Serialize)]
 pub struct RequestStatus {
-    req: Request,
-    pending_hotel: bool,
-    pending_airline: bool,
+    pub req: Request,
+    pub pending_hotel: bool,
+    pub pending_airline: bool,
 }
 
 impl RequestStatus {

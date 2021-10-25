@@ -1,10 +1,13 @@
 use actix_web::{get, post, web, HttpResponse, Responder};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::part2::{
-    errors::*, request::RawRequest, request_handler::HandleRequest, state::ServerState,
-    status_service::GetStatus,
+    errors::*,
+    request::{RawRequest, Request},
+    request_handler::HandleRequest,
+    state::ServerState,
+    status_service::{GetStatus, RequestStatus},
 };
 
 // TYPES ---------------------------------------------------------------
@@ -14,11 +17,21 @@ pub struct GetStatusQuery {
     id: String,
 }
 
+#[derive(Serialize)]
+struct StatusResponse {
+    id: String,
+    airline: String,
+    origin: String,
+    destiny: String,
+    package: bool,
+    status: String,
+}
+
 // GET INDEX ------------------------------------------------------------------
 
 #[get("/")]
 pub async fn get_index() -> impl Responder {
-    HttpResponse::Ok().body("Index page")
+    HttpResponse::Ok()
 }
 
 // GET METRICS ----------------------------------------------------------------
@@ -74,7 +87,37 @@ pub async fn get_request(
         })
         .await
     {
-        Ok(Ok(req_status)) => HttpResponse::Ok().json(req_status),
+        Ok(Ok(RequestStatus {
+            req:
+                Request {
+                    id,
+                    raw_request:
+                        RawRequest {
+                            origin,
+                            destiny,
+                            airline,
+                            package,
+                        },
+                },
+            pending_airline,
+            pending_hotel,
+        })) => {
+            let status = if pending_airline || pending_hotel {
+                String::from("PENDING")
+            } else {
+                String::from("COMPLETED")
+            };
+
+            let response = StatusResponse {
+                id,
+                airline,
+                origin,
+                destiny,
+                package,
+                status,
+            };
+            HttpResponse::Ok().json(response)
+        }
         Ok(Err(StatusServiceError::RequestNotFound)) => {
             HttpResponse::NotFound().body("Request not found")
         }

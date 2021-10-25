@@ -1,3 +1,5 @@
+use std::env;
+
 use actix::Actor;
 use actix_web::{web::Data, App, HttpServer};
 
@@ -18,6 +20,11 @@ async fn main() -> std::io::Result<()> {
         metrics_collector_config: _,
     } = GeneralConfig::from_path(paths::GENERAL).expect("[CRITICAL] Error reading general config");
 
+    let port = match env::var("PORT") {
+        Ok(var) => var.parse::<u16>().expect("[CRITICAL] Invalid PORT env var"),
+        Err(_) => port,
+    };
+
     let logger = Logger::new(logger_config).start();
     let status_service = StatusService::new(logger.clone()).start();
     let request_handler = RequestHandler::new(logger.clone(), status_service.clone()).start();
@@ -34,7 +41,7 @@ async fn main() -> std::io::Result<()> {
             .service(post_request)
             .service(get_request)
     })
-    .bind(format!("127.0.0.1:{}", port))?
+    .bind(("0.0.0.0", port))?
     .run()
     .await
 }

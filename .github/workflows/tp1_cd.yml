@@ -1,0 +1,33 @@
+name: 'TP1 CD'
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - TP1/src/bin/part2.rs
+      - TP1/src/lib/common/**/*
+      - TP1/src/lib/part2/**/*
+
+jobs:
+  build:
+    needs: []
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./TP1
+    env:
+      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      HEROKU_EMAIL: ${{ secrets.HEROKU_MAIL }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build the Docker image
+        run: docker build -t mauro7x/alglobo:1.0 .
+      - name: Log in to Heroku Container Registry
+        run: heroku container:login
+      - name: Tag container
+        run: docker tag mauro7x/alglobo:1.0 registry.heroku.com/alglobo/web
+      - name: Push container
+        run: docker push registry.heroku.com/alglobo/web
+      - name: Release container
+        run: heroku container:release web --app alglobo
