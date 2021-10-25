@@ -1,4 +1,4 @@
-use actix::{Actor, Context, Handler, Message};
+use actix::{Actor, Addr, Context, Handler, Message};
 
 use crate::common::{paths, utils};
 use crate::part2::{
@@ -6,7 +6,9 @@ use crate::part2::{
     dispatcher::HandleBook,
     errors::*,
     hotel::{self, Hotel},
+    logger::Logger,
     request::{RawRequest, Request},
+    status_service::{NewRequest, StatusService},
 };
 
 // ACTOR ----------------------------------------------------------------------
@@ -14,6 +16,8 @@ use crate::part2::{
 pub struct RequestHandler {
     airlines: Airlines,
     hotel: Hotel,
+    logger: Addr<Logger>,
+    status_service: Addr<StatusService>,
 }
 
 impl Actor for RequestHandler {
@@ -25,19 +29,22 @@ impl Actor for RequestHandler {
 }
 
 impl RequestHandler {
-    pub fn new() -> Self {
-        let airlines = airlines::from_path(paths::AIRLINES_CONFIG)
-            .expect("[CRITICAL] Error while initializing airlines web services");
-        let hotel = hotel::from_path(paths::HOTEL_CONFIG)
+    pub fn new(logger: Addr<Logger>, status_service: Addr<StatusService>) -> Self {
+        let airlines = airlines::from_path(
+            paths::AIRLINES_CONFIG,
+            logger.clone(),
+            status_service.clone(),
+        )
+        .expect("[CRITICAL] Error while initializing airlines web services");
+        let hotel = hotel::from_path(paths::HOTEL_CONFIG, logger.clone(), status_service.clone())
             .expect("[CRITICAL] Error while initializing hotel web service");
 
-        RequestHandler { airlines, hotel }
-    }
-}
-
-impl Default for RequestHandler {
-    fn default() -> Self {
-        Self::new()
+        RequestHandler {
+            airlines,
+            hotel,
+            logger,
+            status_service,
+        }
     }
 }
 
@@ -67,6 +74,10 @@ impl Handler<HandleRequest> for RequestHandler {
         // if message is correctly sent to the airline but not
         // to the hotel, for example.
         // Maybe we should do some rollback.
+
+        self.status_service
+            .try_send(NewRequest { req: req.clone() })
+            .map_err(|_| HandlerError::StatusServiceUnavailable)?;
 
         let airline: &Airline = self
             .airlines

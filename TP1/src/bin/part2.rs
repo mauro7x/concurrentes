@@ -1,69 +1,38 @@
-use actix::{Actor, Addr};
-use actix_web::{
-    get, post,
-    web::{self, Data},
-    App, HttpResponse, HttpServer, Responder,
-};
+use actix::Actor;
+use actix_web::{web::Data, App, HttpServer};
 
+use lib::common::{config::GeneralConfig, paths};
 use lib::part2::{
-    errors::*,
-    request::RawRequest,
-    request_handler::{HandleRequest, RequestHandler},
+    logger::Logger,
+    request_handler::RequestHandler,
+    routes::{get_index, get_metrics, get_request, post_request},
+    state::ServerState,
+    status_service::StatusService,
 };
-
-struct ServerState {
-    request_handler: Addr<RequestHandler>,
-}
-
-#[get("/")]
-async fn index() -> impl Responder {
-    HttpResponse::Ok().body("Index page")
-}
-
-#[post("/request")]
-async fn book(raw_request: web::Json<RawRequest>, state: web::Data<ServerState>) -> impl Responder {
-    let request_handler = &state.request_handler;
-    let msg = HandleRequest {
-        raw_request: raw_request.clone(),
-    };
-
-    match request_handler.send(msg).await {
-        Ok(Ok(req_id)) => HttpResponse::Created().body(req_id),
-        Ok(Err(HandlerError::AirlineNotFound)) => {
-            HttpResponse::NotFound().body(format!("Airline {} not found", raw_request.airline))
-        }
-        Ok(Err(HandlerError::AirlineUnavailable)) => HttpResponse::NotFound().body(format!(
-            "Airline {} not available, try later",
-            raw_request.airline
-        )),
-        Ok(Err(HandlerError::HotelUnavailable)) => {
-            HttpResponse::NotFound().body("Hotel not available, try later")
-        }
-        Err(err) => {
-            HttpResponse::InternalServerError().body(format!("Internal Server Error: {}", err))
-        }
-    }
-}
-
-#[get("/request")]
-async fn status() -> impl Responder {
-    // query params?
-    HttpResponse::Ok().body("El status de la request")
-}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let port = 8080;
-    let request_handler = RequestHandler::new().start();
+    let GeneralConfig {
+        port,
+        logger_config,
+        metrics_collector_config,
+    } = GeneralConfig::from_path(paths::GENERAL).expect("[CRITICAL] Error reading general config");
+
+    let logger = Logger::new(logger_config).start();
+    let status_service = StatusService::new(logger.clone()).start();
+    let request_handler = RequestHandler::new(logger.clone(), status_service.clone()).start();
 
     HttpServer::new(move || {
         App::new()
-            .app_data(Data::new(ServerState {
-                request_handler: request_handler.clone(),
-            }))
-            .service(index)
-            .service(book)
-            .service(status)
+            .app_data(Data::new(ServerState::new(
+                request_handler.clone(),
+                status_service.clone(),
+                logger.clone(),
+            )))
+            .service(get_index)
+            .service(get_metrics)
+            .service(post_request)
+            .service(get_request)
     })
     .bind(format!("127.0.0.1:{}", port))?
     .run()

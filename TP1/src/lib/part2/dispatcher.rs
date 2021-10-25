@@ -7,9 +7,19 @@ use actix::{
 };
 
 use crate::part2::{
+    logger::Logger,
     request::Request,
+    status_service::{BookSucceeded, StatusService},
     webservice::{Book, WebService},
 };
+
+// TYPES ----------------------------------------------------------------------
+
+#[derive(Clone, Copy)]
+pub enum WebServiceType {
+    AIRLINE,
+    HOTEL,
+}
 
 // ACTOR ----------------------------------------------------------------------
 
@@ -19,6 +29,9 @@ pub struct WebServiceDispatcher {
     pending_reqs: VecDeque<Request>,
     retry_time: u64,
     service: Addr<WebService>,
+    logger: Addr<Logger>,
+    status_service: Addr<StatusService>,
+    webservice_type: WebServiceType,
 }
 
 impl WebServiceDispatcher {
@@ -27,6 +40,9 @@ impl WebServiceDispatcher {
         name: String,
         rate_limit: isize,
         retry_time: u64,
+        logger: Addr<Logger>,
+        status_service: Addr<StatusService>,
+        webservice_type: WebServiceType,
     ) -> Self {
         WebServiceDispatcher {
             name,
@@ -34,6 +50,9 @@ impl WebServiceDispatcher {
             rate_limit,
             retry_time,
             service,
+            logger,
+            status_service,
+            webservice_type,
         }
     }
 
@@ -73,13 +92,13 @@ pub struct HandleBook {
 
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct BookSucceeded {
+pub struct FetchSucceeded {
     pub req: Request,
 }
 
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct BookFailed {
+pub struct FetchFailed {
     pub req: Request,
 }
 
@@ -101,20 +120,26 @@ impl Handler<HandleBook> for WebServiceDispatcher {
     }
 }
 
-impl Handler<BookSucceeded> for WebServiceDispatcher {
+impl Handler<FetchSucceeded> for WebServiceDispatcher {
     type Result = ();
 
-    fn handle(&mut self, msg: BookSucceeded, ctx: &mut Context<Self>) {
-        println!("[{}] BookSucceeded for request {}", self.name, msg.req.id);
+    fn handle(&mut self, msg: FetchSucceeded, ctx: &mut Context<Self>) {
+        println!("[{}] FetchSucceeded for request {}", self.name, msg.req.id);
+        self.status_service
+            .try_send(BookSucceeded {
+                req: msg.req,
+                book_type: self.webservice_type,
+            })
+            .expect("[CRITICAL] BookSucceeded sending failed");
         self.book_or_release(ctx.address());
     }
 }
 
-impl Handler<BookFailed> for WebServiceDispatcher {
+impl Handler<FetchFailed> for WebServiceDispatcher {
     type Result = ResponseActFuture<Self, ()>;
 
-    fn handle(&mut self, msg: BookFailed, ctx: &mut Context<Self>) -> Self::Result {
-        println!("[{}] BookFailed for request {}", self.name, msg.req.id);
+    fn handle(&mut self, msg: FetchFailed, ctx: &mut Context<Self>) -> Self::Result {
+        println!("[{}] FetchFailed for request {}", self.name, msg.req.id);
         self.book_or_release(ctx.address());
 
         // We wait retry_time until retrying the failed req

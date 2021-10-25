@@ -3,6 +3,7 @@ use std::error::Error;
 
 #[derive(Debug, Deserialize)]
 pub struct GeneralConfig {
+    pub port: u64,
     pub logger_config: LoggerConfig,
     pub metrics_collector_config: MetricsCollectorConfig,
 }

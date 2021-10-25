@@ -1,6 +1,6 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RawRequest {
     pub origin: String,
     pub destiny: String,
@@ -8,7 +8,7 @@ pub struct RawRequest {
     pub package: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Request {
     pub id: String,
     pub raw_request: RawRequest,

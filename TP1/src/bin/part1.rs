@@ -8,9 +8,11 @@ use lib::part1::{
 
 fn run() -> Result<(), Box<dyn Error>> {
     let GeneralConfig {
+        port: _,
         logger_config,
         metrics_collector_config,
     } = GeneralConfig::from_path(paths::GENERAL)?;
+
     let logger = logger::Logger::from_config(logger_config)?;
     let metrics_collector =
         metrics_collector::MetricsCollector::from_config(metrics_collector_config)?;

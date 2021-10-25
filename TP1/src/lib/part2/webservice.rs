@@ -7,7 +7,8 @@ use actix::{
 use rand::Rng;
 
 use crate::part2::{
-    dispatcher::{BookFailed, BookSucceeded, WebServiceDispatcher},
+    dispatcher::{FetchFailed, FetchSucceeded, WebServiceDispatcher},
+    logger::Logger,
     request::Request,
 };
 
@@ -18,15 +19,23 @@ pub struct WebService {
     failure_rate: f64,
     min_delay: u64,
     max_delay: u64,
+    logger: Addr<Logger>,
 }
 
 impl WebService {
-    pub fn new(name: String, failure_rate: f64, min_delay: u64, max_delay: u64) -> Self {
+    pub fn new(
+        name: String,
+        failure_rate: f64,
+        min_delay: u64,
+        max_delay: u64,
+        logger: Addr<Logger>,
+    ) -> Self {
         WebService {
             name,
             failure_rate,
             min_delay,
             max_delay,
+            logger,
         }
     }
 }
@@ -63,12 +72,12 @@ impl Handler<Book> for WebService {
 
                 if coin > me.failure_rate {
                     requester
-                        .try_send(BookSucceeded { req })
-                        .expect("[CRITICAL] Could not send BookSucceeded msg");
+                        .try_send(FetchSucceeded { req })
+                        .expect("[CRITICAL] Could not send FetchSucceeded msg");
                 } else {
                     requester
-                        .try_send(BookFailed { req })
-                        .expect("[CRITICAL] Could not send BookFailed msg");
+                        .try_send(FetchFailed { req })
+                        .expect("[CRITICAL] Could not send FetchFailed msg");
                 }
             },
         ))
