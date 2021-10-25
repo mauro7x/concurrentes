@@ -3,6 +3,7 @@ use std::error::Error;
 
 #[derive(Debug, Deserialize)]
 pub struct GeneralConfig {
+    pub port: u64,
     pub logger_config: LoggerConfig,
     pub metrics_collector_config: MetricsCollectorConfig,
 }
@@ -24,6 +25,8 @@ pub struct WebServiceConfig {
     pub rate_limit: isize,
     pub failure_rate: f64,
     pub retry_time: u64,
+    pub min_delay: u64,
+    pub max_delay: u64,
 }
 
 pub type HotelConfig = WebServiceConfig;

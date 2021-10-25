@@ -1,15 +1,6 @@
-// Public
-pub mod airlines;
-pub mod config;
-pub mod dispatcher;
-pub mod hotel;
-pub mod logger;
-pub mod metrics_collector;
-pub mod paths;
-pub mod request_handler;
+pub mod common;
+pub mod part1;
+pub mod part2;
 
-// Private
-mod fetch;
-mod request;
-mod utils;
-mod webservice;
+// Temp
+pub mod actors;

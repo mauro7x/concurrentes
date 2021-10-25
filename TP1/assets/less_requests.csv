@@ -1,0 +1,7 @@
+origin,destiny,airline,package
+MAD,CDG,Delta Air Lines,false
+MAD,GRU,Delta Air Lines,true
+FCO,GRU,Delta Air Lines,true
+CDG,JFK,Delta Air Lines,false
+MAD,EZE,Delta Air Lines,true
+EZE,JFK,Delta Air Lines,false

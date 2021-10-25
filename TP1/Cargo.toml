@@ -10,13 +10,15 @@ name = "lib"
 path = "src/lib/lib.rs"
 
 [dependencies]
-actix-web = "3"
+actix-web = "4.0.0-beta.10"
+actix = "0.12"
 chrono = "0.4"
 csv = "1.1"
 rand = "0.8.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0.68"
 std-semaphore = "0.1.0"
+uuid = { version = "0.8", features = ["v4"] }
 
 [dev-dependencies]
 rusty-hook = "^0.11.2"

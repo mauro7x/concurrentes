@@ -1,10 +1,7 @@
 use std::{collections::HashMap, error::Error};
 
-use crate::{
-    config::{AirlineConfig, AirlinesConfig},
-    logger::LoggerSender,
-    webservice::WebService,
-};
+use crate::common::config::{AirlineConfig, AirlinesConfig};
+use crate::part1::{logger::LoggerSender, webservice::WebService};
 
 pub type Airline = WebService;
 pub type Airlines = HashMap<String, Airline>;
@@ -20,6 +17,8 @@ pub fn from_path(path: &str, logger_sender: LoggerSender) -> Result<Airlines, Bo
         rate_limit,
         failure_rate,
         retry_time,
+        min_delay,
+        max_delay,
     } in airlines
     {
         content.insert(
@@ -30,6 +29,8 @@ pub fn from_path(path: &str, logger_sender: LoggerSender) -> Result<Airlines, Bo
                 failure_rate,
                 retry_time,
                 logger_sender.clone(),
+                min_delay,
+                max_delay,
             ),
         );
     }

@@ -1,15 +1,18 @@
 use std::{error::Error, process};
 
-use lib::{
-    airlines, config::GeneralConfig, dispatcher, hotel, logger, metrics_collector, paths,
-    request_handler::RequestHandler,
+use lib::common::{config::GeneralConfig, paths};
+
+use lib::part1::{
+    airlines, dispatcher, hotel, logger, metrics_collector, request_handler::RequestHandler,
 };
 
 fn run() -> Result<(), Box<dyn Error>> {
     let GeneralConfig {
+        port: _,
         logger_config,
         metrics_collector_config,
     } = GeneralConfig::from_path(paths::GENERAL)?;
+
     let logger = logger::Logger::from_config(logger_config)?;
     let metrics_collector =
         metrics_collector::MetricsCollector::from_config(metrics_collector_config)?;

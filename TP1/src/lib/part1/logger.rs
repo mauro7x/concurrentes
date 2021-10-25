@@ -1,4 +1,4 @@
-use crate::config::LoggerConfig;
+use crate::common::config::LoggerConfig;
 
 use std::{
     error::Error,

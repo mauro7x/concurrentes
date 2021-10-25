@@ -1,4 +1,5 @@
-use crate::{config::MetricsCollectorConfig, request::Request, request::RequestDuration};
+use crate::common::config::MetricsCollectorConfig;
+use crate::part1::request::{Request, RequestDuration};
 
 use std::{
     collections::HashMap,
@@ -106,7 +107,7 @@ impl MetricsCollector {
         }
 
         println!(
-            "[METRICS] #Requests successfully processed: {} reqs",
+            "[METRICS] Requests successfully processed: {} reqs",
             metrics.n_reqs
         );
         if metrics.n_reqs != 0 {
@@ -114,8 +115,8 @@ impl MetricsCollector {
                 "[METRICS] Mean time to book: {} ms",
                 metrics.reqs_duration_cumsum / (metrics.n_reqs as i64)
             );
+            println!("[METRICS] Most booked routes: {}", most_booked_routes_msg);
         };
-        println!("[METRICS] Most booked routes: {}", most_booked_routes_msg);
     }
 
     fn print_metrics_periodically(
@@ -136,6 +137,7 @@ impl MetricsCollector {
             MetricsCollector::print_metrics(&metrics_lock, n_most_booked);
             thread::sleep(period);
         }
+        MetricsCollector::print_metrics(&metrics_lock, n_most_booked);
     }
 
     pub fn get_sender(&self) -> MetricsSender {
