@@ -47,7 +47,7 @@ pub fn from_path(
         retry_time,
         logger,
         status_service,
-        WebServiceType::HOTEL,
+        WebServiceType::Hotel,
     )
     .start();
 

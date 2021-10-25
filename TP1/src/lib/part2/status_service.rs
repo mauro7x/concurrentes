@@ -48,7 +48,7 @@ impl Actor for StatusService {
     type Context = Context<Self>;
 
     fn started(&mut self, _: &mut Self::Context) {
-        println!("StatusService started");
+        Logger::send_to(&self.logger, "[StatusService] Started".to_string());
     }
 }
 
@@ -78,42 +78,57 @@ pub struct GetStatus {
 impl Handler<NewRequest> for StatusService {
     type Result = ();
 
-    fn handle(&mut self, msg: NewRequest, _ctx: &mut Context<Self>) {
-        let req = msg.req;
+    fn handle(&mut self, NewRequest { req }: NewRequest, _ctx: &mut Context<Self>) {
         let req_id = req.id.clone();
-        println!("[StatusService] Registering request {}", req_id);
-        self.reqs.insert(req_id, RequestStatus::new(req));
+        self.reqs.insert(req_id.clone(), RequestStatus::new(req));
+        Logger::send_to(
+            &self.logger,
+            format!("[StatusService] Registered request {}", req_id),
+        );
     }
 }
 
 impl Handler<BookSucceeded> for StatusService {
     type Result = ();
 
-    fn handle(&mut self, msg: BookSucceeded, _ctx: &mut Context<Self>) {
+    fn handle(
+        &mut self,
+        BookSucceeded { req, book_type }: BookSucceeded,
+        _ctx: &mut Context<Self>,
+    ) {
         let req_status = self
             .reqs
-            .get_mut(&msg.req.id)
+            .get_mut(&req.id)
             .expect("[CRITICAL] StatusService received BookSucceeded of unregistered request");
 
-        match msg.book_type {
-            WebServiceType::AIRLINE => {
-                println!(
-                    "[StatusService] Registering airline book succeeded for request {}",
-                    msg.req.id
+        match book_type {
+            WebServiceType::Airline => {
+                Logger::send_to(
+                    &self.logger,
+                    format!(
+                        "[StatusService] Registering airline book succeeded for request {}",
+                        req.id
+                    ),
                 );
                 req_status.pending_airline = false;
             }
-            WebServiceType::HOTEL => {
-                println!(
-                    "[StatusService] Registering hotel book succeeded for request {}",
-                    msg.req.id
+            WebServiceType::Hotel => {
+                Logger::send_to(
+                    &self.logger,
+                    format!(
+                        "[StatusService] Registering hotel book succeeded for request {}",
+                        req.id
+                    ),
                 );
                 req_status.pending_hotel = false;
             }
         }
 
         if !req_status.pending_hotel && !req_status.pending_airline {
-            println!("[StatusService] FINISHED Request {}", msg.req.id);
+            Logger::send_to(
+                &self.logger,
+                format!("[StatusService] FINISHED Request {}", req.id),
+            );
         }
     }
 }
@@ -123,15 +138,18 @@ impl Handler<GetStatus> for StatusService {
 
     fn handle(
         &mut self,
-        msg: GetStatus,
+        GetStatus { req_id }: GetStatus,
         _ctx: &mut Context<Self>,
     ) -> Result<RequestStatus, StatusServiceError> {
-        println!("[StatusService] Getting status for request {}", msg.req_id);
-
         let req = self
             .reqs
-            .get(&msg.req_id)
+            .get(&req_id)
             .ok_or(StatusServiceError::RequestNotFound)?;
+
+        Logger::send_to(
+            &self.logger,
+            format!("[StatusService] Retrieved status for request {}", req_id),
+        );
 
         Ok(req.clone())
     }

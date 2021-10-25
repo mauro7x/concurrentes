@@ -17,8 +17,8 @@ use crate::part2::{
 
 #[derive(Clone, Copy)]
 pub enum WebServiceType {
-    AIRLINE,
-    HOTEL,
+    Airline,
+    Hotel,
 }
 
 // ACTOR ----------------------------------------------------------------------
@@ -57,7 +57,10 @@ impl WebServiceDispatcher {
     }
 
     fn book(&mut self, req: Request, addr: Addr<WebServiceDispatcher>) {
-        println!("[{}] Fetching for request {}", self.name, req.id);
+        Logger::send_to(
+            &self.logger,
+            format!("({}) Fetching for request {}", self.name, req.id),
+        );
         self.service
             .try_send(Book {
                 req,
@@ -78,7 +81,7 @@ impl Actor for WebServiceDispatcher {
     type Context = Context<Self>;
 
     fn started(&mut self, _: &mut Self::Context) {
-        println!("[{}] Dispatcher started", self.name);
+        Logger::send_to(&self.logger, format!("({}) Dispatcher started", self.name));
     }
 }
 
@@ -108,13 +111,19 @@ impl Handler<HandleBook> for WebServiceDispatcher {
     type Result = ();
 
     fn handle(&mut self, msg: HandleBook, ctx: &mut Context<Self>) {
-        println!("[{}] HandleBook for request {}", self.name, msg.req.id);
+        Logger::send_to(
+            &self.logger,
+            format!("({}) HandleBook for request {}", self.name, msg.req.id),
+        );
 
         if self.rate_limit > 0 {
             self.book(msg.req, ctx.address());
             self.rate_limit -= 1;
         } else {
-            println!("[{}] Queueing request {}", self.name, msg.req.id);
+            Logger::send_to(
+                &self.logger,
+                format!("({}) Queueing request {}", self.name, msg.req.id),
+            );
             self.pending_reqs.push_back(msg.req);
         }
     }
@@ -124,7 +133,10 @@ impl Handler<FetchSucceeded> for WebServiceDispatcher {
     type Result = ();
 
     fn handle(&mut self, msg: FetchSucceeded, ctx: &mut Context<Self>) {
-        println!("[{}] FetchSucceeded for request {}", self.name, msg.req.id);
+        Logger::send_to(
+            &self.logger,
+            format!("({}) FetchSucceeded for request {}", self.name, msg.req.id),
+        );
         self.status_service
             .try_send(BookSucceeded {
                 req: msg.req,
@@ -139,13 +151,19 @@ impl Handler<FetchFailed> for WebServiceDispatcher {
     type Result = ResponseActFuture<Self, ()>;
 
     fn handle(&mut self, msg: FetchFailed, ctx: &mut Context<Self>) -> Self::Result {
-        println!("[{}] FetchFailed for request {}", self.name, msg.req.id);
+        Logger::send_to(
+            &self.logger,
+            format!("({}) FetchFailed for request {}", self.name, msg.req.id),
+        );
         self.book_or_release(ctx.address());
 
         // We wait retry_time until retrying the failed req
-        println!(
-            "[{}] Waiting {} secs before retrying for request {}",
-            self.name, self.retry_time, msg.req.id
+        Logger::send_to(
+            &self.logger,
+            format!(
+                "({}) Waiting {} secs before retrying for request {}",
+                self.name, self.retry_time, msg.req.id
+            ),
         );
         Box::pin(
             sleep(Duration::from_secs(self.retry_time))

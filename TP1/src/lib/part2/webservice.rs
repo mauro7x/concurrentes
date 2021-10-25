@@ -44,7 +44,7 @@ impl Actor for WebService {
     type Context = Context<Self>;
 
     fn started(&mut self, _: &mut Self::Context) {
-        println!("[{}] WebService started", self.name);
+        Logger::send_to(&self.logger, format!("({}) WebService started", self.name));
     }
 }
 
