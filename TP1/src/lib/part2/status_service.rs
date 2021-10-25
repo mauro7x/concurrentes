@@ -1,23 +1,17 @@
 use actix::{Actor, Addr, AsyncContext, Context, Handler, Message};
 use crate::part2::request::Request;
-
-const PACKAGE_TASKS: u64 = 2;
-const NON_PACKAGE_TASKS: u64 = 1;
-
 pub struct RequestStatus {
     req: Request,
-    pendingTasks: u64,
+    pendingHotel: bool,
+    pendingAirline: bool,
 }
 
 impl RequestStatus {
     pub fn new(req: Request) -> Self {
         RequestStatus {
             req,
-            pendingTasks: if req.package {
-                PACKAGE_TASKS
-            } else {
-                NON_PACKAGE_TASKS
-            },
+            pendingAirline: true,
+            pendingHotel: req.package,
         }
     }
 }
