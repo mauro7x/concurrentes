@@ -3,30 +3,48 @@
 		"name": "LATAM",
 		"rate_limit": 3,
 		"failure_rate": 0.2,
-		"retry_time": 5
+		"retry_time": 5,
+		"min_delay": 5,
+		"max_delay": 10
 	},
 	{
 		"name": "Aerolineas Argentinas",
 		"rate_limit": 3,
 		"failure_rate": 0.2,
-		"retry_time": 5
+		"retry_time": 5,
+		"min_delay": 5,
+		"max_delay": 10
 	},
 	{
 		"name": "Iberia",
 		"rate_limit": 3,
 		"failure_rate": 0.2,
-		"retry_time": 5
+		"retry_time": 5,
+		"min_delay": 5,
+		"max_delay": 10
 	},
 	{
 		"name": "American Airlines",
 		"rate_limit": 3,
 		"failure_rate": 0.2,
-		"retry_time": 5
+		"retry_time": 5,
+		"min_delay": 5,
+		"max_delay": 10
 	},
 	{
 		"name": "Delta Air Lines",
 		"rate_limit": 3,
 		"failure_rate": 0.2,
-		"retry_time": 5
+		"retry_time": 5,
+		"min_delay": 5,
+		"max_delay": 10
+	},
+	{
+		"name": "Failing Air Lines",
+		"rate_limit": 3,
+		"failure_rate": 1,
+		"retry_time": 5,
+		"min_delay": 5,
+		"max_delay": 10
 	}
 ]

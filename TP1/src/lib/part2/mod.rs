@@ -1,9 +1,10 @@
-pub mod airlines;
-pub mod config;
-pub mod dispatcher;
+// Public
 pub mod errors;
-pub mod fetch;
 pub mod request;
 pub mod request_handler;
-pub mod tests;
-pub mod webservice;
+
+// Private
+mod airlines;
+mod dispatcher;
+mod hotel;
+mod webservice;

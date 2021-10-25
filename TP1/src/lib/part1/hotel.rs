@@ -13,6 +13,8 @@ pub fn from_path(path: &str, logger_sender: LoggerSender) -> Result<Hotel, Box<d
         rate_limit,
         failure_rate,
         retry_time,
+        min_delay,
+        max_delay,
     } = serde_json::from_str(&data)?;
 
     Ok(WebService::new(
@@ -21,5 +23,7 @@ pub fn from_path(path: &str, logger_sender: LoggerSender) -> Result<Hotel, Box<d
         failure_rate,
         retry_time,
         logger_sender,
+        min_delay,
+        max_delay,
     ))
 }

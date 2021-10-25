@@ -17,6 +17,8 @@ pub fn from_path(path: &str, logger_sender: LoggerSender) -> Result<Airlines, Bo
         rate_limit,
         failure_rate,
         retry_time,
+        min_delay,
+        max_delay,
     } in airlines
     {
         content.insert(
@@ -27,6 +29,8 @@ pub fn from_path(path: &str, logger_sender: LoggerSender) -> Result<Airlines, Bo
                 failure_rate,
                 retry_time,
                 logger_sender.clone(),
+                min_delay,
+                max_delay,
             ),
         );
     }

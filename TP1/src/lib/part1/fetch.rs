@@ -4,11 +4,11 @@ use crate::common::utils::*;
 
 pub struct FetchError;
 
-pub fn simulate_fetch(failure_rate: f64) -> Result<(), FetchError> {
+pub fn simulate_fetch(failure_rate: f64, min_delay: u64, max_delay: u64) -> Result<(), FetchError> {
     let mut rng = rand::thread_rng();
 
     // Simulate fetch
-    let fetch_time = rng.gen_range(1..20);
+    let fetch_time = rng.gen_range(min_delay..max_delay);
     sleep(fetch_time);
 
     // Simulate status

@@ -5,6 +5,7 @@ use crate::part2::{
     airlines::{self, Airline, Airlines},
     dispatcher::HandleBook,
     errors::*,
+    hotel::{self, Hotel},
     request::{RawRequest, Request},
 };
 
@@ -12,6 +13,7 @@ use crate::part2::{
 
 pub struct RequestHandler {
     airlines: Airlines,
+    hotel: Hotel,
 }
 
 impl Actor for RequestHandler {
@@ -25,9 +27,17 @@ impl Actor for RequestHandler {
 impl RequestHandler {
     pub fn new() -> Self {
         let airlines = airlines::from_path(paths::AIRLINES_CONFIG)
-            .expect("[CRITICAL] Error while initializing airlines");
+            .expect("[CRITICAL] Error while initializing airlines web services");
+        let hotel = hotel::from_path(paths::HOTEL_CONFIG)
+            .expect("[CRITICAL] Error while initializing hotel web service");
 
-        RequestHandler { airlines }
+        RequestHandler { airlines, hotel }
+    }
+}
+
+impl Default for RequestHandler {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -52,17 +62,28 @@ impl Handler<HandleRequest> for RequestHandler {
             raw_request: raw_request.clone(),
         };
 
-        println!("[REQ] {:#?}", req);
+        // In a real system, we should run the following
+        // lines in transaction: that means, take some action
+        // if message is correctly sent to the airline but not
+        // to the hotel, for example.
+        // Maybe we should do some rollback.
 
         let airline: &Airline = self
             .airlines
             .get(&raw_request.airline)
             .ok_or(HandlerError::AirlineNotFound)?;
 
+        if raw_request.package {
+            self.hotel
+                .try_send(HandleBook { req: req.clone() })
+                .map_err(|_| HandlerError::HotelUnavailable)?;
+        }
+
         airline
-            .try_send(HandleBook { req })
+            .try_send(HandleBook { req: req.clone() })
             .map_err(|_| HandlerError::AirlineUnavailable)?;
 
+        println!("[RequestHandler] {:#?}", req);
         Ok(req_id)
     }
 }

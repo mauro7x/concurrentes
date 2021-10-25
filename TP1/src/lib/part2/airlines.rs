@@ -19,9 +19,11 @@ pub fn from_path(path: &str) -> Result<Airlines, Box<dyn Error>> {
         rate_limit,
         failure_rate,
         retry_time,
+        min_delay,
+        max_delay,
     } in airlines
     {
-        let airline = WebService::new(name.clone(), failure_rate).start();
+        let airline = WebService::new(name.clone(), failure_rate, min_delay, max_delay).start();
         let dispatcher =
             WebServiceDispatcher::new(airline, name.clone(), rate_limit, retry_time).start();
         content.insert(name, dispatcher);

@@ -8,7 +8,7 @@ pub struct RawRequest {
     pub package: bool,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Request {
     pub id: String,
     pub raw_request: RawRequest,

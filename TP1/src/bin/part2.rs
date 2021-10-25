@@ -1,5 +1,9 @@
 use actix::{Actor, Addr};
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    get, post,
+    web::{self, Data},
+    App, HttpResponse, HttpServer, Responder,
+};
 
 use lib::part2::{
     errors::*,
@@ -52,17 +56,16 @@ async fn main() -> std::io::Result<()> {
     let port = 8080;
     let request_handler = RequestHandler::new().start();
 
-    let server = HttpServer::new(move || {
+    HttpServer::new(move || {
         App::new()
-            .data(ServerState {
+            .app_data(Data::new(ServerState {
                 request_handler: request_handler.clone(),
-            })
+            }))
             .service(index)
             .service(book)
             .service(status)
     })
-    .bind(format!("127.0.0.1:{}", port))?;
-    println!("Listening on port {}", port);
-
-    server.run().await
+    .bind(format!("127.0.0.1:{}", port))?
+    .run()
+    .await
 }

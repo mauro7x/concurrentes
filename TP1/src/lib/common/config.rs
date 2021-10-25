@@ -24,6 +24,8 @@ pub struct WebServiceConfig {
     pub rate_limit: isize,
     pub failure_rate: f64,
     pub retry_time: u64,
+    pub min_delay: u64,
+    pub max_delay: u64,
 }
 
 pub type HotelConfig = WebServiceConfig;

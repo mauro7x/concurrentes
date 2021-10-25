@@ -12,6 +12,8 @@ pub struct WebService {
     failure_rate: f64,
     retry_time: u64,
     logger_sender: LoggerSender,
+    min_delay: u64,
+    max_delay: u64,
 }
 
 impl WebService {
@@ -21,6 +23,8 @@ impl WebService {
         failure_rate: f64,
         retry_time: u64,
         logger_sender: LoggerSender,
+        min_delay: u64,
+        max_delay: u64,
     ) -> Self {
         WebService {
             name,
@@ -28,6 +32,8 @@ impl WebService {
             failure_rate,
             retry_time,
             logger_sender,
+            min_delay,
+            max_delay,
         }
     }
 
@@ -35,7 +41,7 @@ impl WebService {
         let _guard = self.sem.access();
         self.logger_sender
             .send(format!("[REQ #{}] Fetching {}...", req_id, self.name));
-        simulate_fetch(self.failure_rate)
+        simulate_fetch(self.failure_rate, self.min_delay, self.max_delay)
     }
 
     pub fn fetch_with_retries(&self, req_id: u32) -> u32 {
