@@ -106,7 +106,7 @@ impl Handler<BookSucceeded> for StatusService {
                 Logger::send_to(
                     &self.logger,
                     format!(
-                        "[StatusService] Registering airline book succeeded for request {}",
+                        "[StatusService] Airline book registered for request {}",
                         req.id
                     ),
                 );
@@ -116,7 +116,7 @@ impl Handler<BookSucceeded> for StatusService {
                 Logger::send_to(
                     &self.logger,
                     format!(
-                        "[StatusService] Registering hotel book succeeded for request {}",
+                        "[StatusService] Hotel book registered for request {}",
                         req.id
                     ),
                 );
@@ -127,7 +127,7 @@ impl Handler<BookSucceeded> for StatusService {
         if !req_status.pending_hotel && !req_status.pending_airline {
             Logger::send_to(
                 &self.logger,
-                format!("[StatusService] FINISHED Request {}", req.id),
+                format!("[StatusService] Finished request {}", req.id),
             );
         }
     }
