@@ -3,7 +3,7 @@ use std::{
     io::Write,
 };
 
-use actix::{Actor, Addr, Context, Handler, Message};
+use actix::{Actor, Addr, AsyncContext, Context, Handler, Message};
 
 use crate::common::config::LoggerConfig;
 
@@ -24,8 +24,8 @@ impl Logger {
         Logger { file }
     }
 
-    pub fn send_to(logger: Addr<Logger>, msg: String) {
-        if let Err(_) = logger.try_send(LogMessage(msg)) {
+    pub fn send_to(logger: &Addr<Logger>, msg: String) {
+        if logger.try_send(LogMessage(msg)).is_err() {
             println!("Warning: failed to send log message to Logger");
         };
     }
@@ -33,6 +33,10 @@ impl Logger {
 
 impl Actor for Logger {
     type Context = Context<Self>;
+
+    fn started(&mut self, ctx: &mut Self::Context) {
+        Logger::send_to(&ctx.address(), "[Logger] Started".to_string());
+    }
 }
 
 // MESSAGES -------------------------------------------------------------------

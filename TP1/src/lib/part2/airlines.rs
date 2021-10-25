@@ -51,7 +51,7 @@ pub fn from_path(
             retry_time,
             logger.clone(),
             status_service.clone(),
-            WebServiceType::AIRLINE,
+            WebServiceType::Airline,
         )
         .start();
         content.insert(name, dispatcher);

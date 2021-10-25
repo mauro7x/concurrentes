@@ -15,7 +15,7 @@ async fn main() -> std::io::Result<()> {
     let GeneralConfig {
         port,
         logger_config,
-        metrics_collector_config,
+        metrics_collector_config: _,
     } = GeneralConfig::from_path(paths::GENERAL).expect("[CRITICAL] Error reading general config");
 
     let logger = Logger::new(logger_config).start();

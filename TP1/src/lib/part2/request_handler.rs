@@ -24,7 +24,7 @@ impl Actor for RequestHandler {
     type Context = Context<Self>;
 
     fn started(&mut self, _: &mut Self::Context) {
-        println!("[RequestHandler] Started");
+        Logger::send_to(&self.logger, "[RequestHandler] Started".to_string());
     }
 }
 
@@ -94,7 +94,8 @@ impl Handler<HandleRequest> for RequestHandler {
             .try_send(HandleBook { req: req.clone() })
             .map_err(|_| HandlerError::AirlineUnavailable)?;
 
-        println!("[RequestHandler] {:#?}", req);
+        Logger::send_to(&self.logger, format!("[RequestHandler] {:#?}", req));
+
         Ok(req_id)
     }
 }
