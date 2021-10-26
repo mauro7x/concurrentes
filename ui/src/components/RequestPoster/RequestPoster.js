@@ -53,10 +53,10 @@ const RequestPoster = () => {
 				>
 					Enviar
 				</button>
-				<button onClick={() => onCheckStatus} className='mid-action'>
+				<button onClick={() => onCheckStatus()} className='mid-action'>
 					Chequear estado
 				</button>
-				<button onClick={() => onClean} className='down-action'>
+				<button onClick={() => onClean()} className='down-action'>
 					Limpiar
 				</button>
 			</div>

@@ -25,8 +25,8 @@ export const getRequest = async (reqId) =>
 		})
 		.then(({ data }) => data)
 		.catch((err) => {
-			console.log('err:', err);
-			return null;
+			const msg = err.response?.data;
+			return msg ?? null;
 		});
 
 export const postRequests = async (reqs) => {

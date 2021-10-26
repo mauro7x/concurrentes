@@ -23,7 +23,7 @@ export const parseInputRequests = (rawInput) => {
 		return false;
 	});
 
-	if (invalid) {
+	if (invalid !== undefined) {
 		return null;
 	}
 
