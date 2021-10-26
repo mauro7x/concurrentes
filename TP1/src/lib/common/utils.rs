@@ -1,6 +1,6 @@
 use std::{thread, time};
 
-use chrono::Utc;
+use chrono::Local;
 use uuid::Uuid;
 
 pub fn uuid() -> String {
@@ -9,13 +9,18 @@ pub fn uuid() -> String {
 }
 
 pub fn now() -> i64 {
-    let dt = Utc::now();
+    let dt = Local::now();
     dt.timestamp_millis()
 }
 
 pub fn now_rfc() -> String {
-    let dt = Utc::now();
+    let dt = Local::now();
     dt.to_rfc3339()
+}
+
+pub fn now_h_m_s() -> String {
+    let dt = Local::now();
+    dt.format("%H:%M:%S").to_string()
 }
 
 pub fn sleep(secs: u64) {
