@@ -1,6 +1,7 @@
 # Main repository structure
 repository: '*'
 github: .github/**/*
+hooks: hooks/**/*
 
 # Packages
 ui: ui/**/*
