@@ -6,6 +6,7 @@ use actix_web::{web::Data, App, HttpServer};
 use lib::common::{config::GeneralConfig, paths};
 use lib::part2::{
     logger::Logger,
+    metrics::MetricsCollector,
     request_handler::RequestHandler,
     routes::{get_index, get_metrics, get_request, post_request},
     state::ServerState,
@@ -17,7 +18,7 @@ async fn main() -> std::io::Result<()> {
     let GeneralConfig {
         port,
         logger_config,
-        metrics_collector_config: _,
+        metrics_collector_config,
     } = GeneralConfig::from_path(paths::GENERAL).expect("[CRITICAL] Error reading general config");
 
     let port = match env::var("PORT") {
@@ -26,7 +27,8 @@ async fn main() -> std::io::Result<()> {
     };
 
     let logger = Logger::new(logger_config).start();
-    let status_service = StatusService::new(logger.clone()).start();
+    let metrics_collector = MetricsCollector::new(metrics_collector_config, logger.clone()).start();
+    let status_service = StatusService::new(logger.clone(), metrics_collector.clone()).start();
     let request_handler = RequestHandler::new(logger.clone(), status_service.clone()).start();
 
     HttpServer::new(move || {
@@ -35,6 +37,7 @@ async fn main() -> std::io::Result<()> {
                 request_handler.clone(),
                 status_service.clone(),
                 logger.clone(),
+                metrics_collector.clone(),
             )))
             .service(get_index)
             .service(get_metrics)

@@ -1,5 +1,6 @@
 use actix::{Actor, Addr, Context, Handler, Message};
 
+use crate::common::utils::now;
 use crate::common::{paths, utils};
 use crate::part2::{
     airlines::{self, Airline, Airlines},
@@ -66,6 +67,7 @@ impl Handler<HandleRequest> for RequestHandler {
         let req_id = utils::uuid();
         let req = Request {
             id: req_id.clone(),
+            start_time: now(),
             raw_request: raw_request.clone(),
         };
 

@@ -11,5 +11,6 @@ pub struct RawRequest {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Request {
     pub id: String,
+    pub start_time: i64,
     pub raw_request: RawRequest,
 }

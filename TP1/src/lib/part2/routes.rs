@@ -1,9 +1,11 @@
 use actix_web::{get, post, web, HttpResponse, Responder};
 
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use crate::part2::{
     errors::*,
+    metrics::GetMetrics,
     request::{RawRequest, Request},
     request_handler::HandleRequest,
     state::ServerState,
@@ -27,6 +29,13 @@ struct StatusResponse {
     status: String,
 }
 
+#[derive(Serialize)]
+struct GetMetricsResponse {
+    routes_booking_count: Vec<serde_json::Value>,
+    req_mean_time: i64,
+    n_reqs: u64,
+}
+
 // GET INDEX ------------------------------------------------------------------
 
 #[get("/")]
@@ -37,8 +46,35 @@ pub async fn get_index() -> impl Responder {
 // GET METRICS ----------------------------------------------------------------
 
 #[get("/metrics")]
-pub async fn get_metrics() -> impl Responder {
-    HttpResponse::Ok().body("Metrics page")
+pub async fn get_metrics(state: web::Data<ServerState>) -> impl Responder {
+    let msg = GetMetrics {};
+    match state.metrics_collector.send(msg).await {
+        Ok(Ok(res)) => {
+            let routes_booking_count = res
+                .most_visited_routes
+                .iter()
+                .map(|val| {
+                    json!({
+                        "from": val.0.0.clone(),
+                        "to": val.0.1.clone(),
+                        "amount": val.1.to_string()
+                    })
+                })
+                .collect();
+
+            HttpResponse::Ok().json(GetMetricsResponse {
+                routes_booking_count,
+                n_reqs: res.n_req,
+                req_mean_time: res.req_mean_time,
+            })
+        }
+        Ok(Err(_)) => {
+            HttpResponse::InternalServerError().body("Metrics Collector error".to_string())
+        }
+        Err(err) => {
+            HttpResponse::InternalServerError().body(format!("Internal Server Error: {}", err))
+        }
+    }
 }
 
 // POST REQUEST ---------------------------------------------------------------
@@ -91,6 +127,7 @@ pub async fn get_request(
             req:
                 Request {
                     id,
+                    start_time: _,
                     raw_request:
                         RawRequest {
                             origin,
