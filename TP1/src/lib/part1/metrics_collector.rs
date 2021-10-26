@@ -1,3 +1,10 @@
+//! Metrics collector entities.
+//!
+//! Metrics collected:
+//! * Mean request time
+//! * Top n routes
+//! * Number of requests
+
 use crate::common::config::MetricsCollectorConfig;
 use crate::part1::request::{Request, RequestDuration};
 
@@ -16,6 +23,11 @@ struct Metrics {
     n_reqs: u64,
 }
 
+/// MetricsCollector is an entity that keeps a reference to the threads
+/// that handle the metrics. One of the threads will be in charge of collecting
+/// metrics using a channel for communication, the other will be in charge of printing
+/// to stdout periodically the metrics collected. Both threads get syncronized using a RwLock.
+
 pub struct MetricsCollector {
     collector_handler: JoinHandle<()>,
     keep_running: Arc<RwLock<bool>>,
@@ -23,12 +35,18 @@ pub struct MetricsCollector {
     tx: Sender<RequestDuration>,
 }
 
+/// MetricsSender holds a reference to the channel that handles the communication
+/// with the metrics collector thread.
+
 #[derive(Clone)]
 pub struct MetricsSender {
     tx: Sender<RequestDuration>,
 }
 
 impl MetricsCollector {
+    /// Given a MetricsCollectorConfig this method will create a MetricsCollector entity,
+    /// and spawn the corresponding threads.
+
     pub fn from_config(config: MetricsCollectorConfig) -> Result<MetricsCollector, Box<dyn Error>> {
         let (tx, rx): (Sender<RequestDuration>, Receiver<RequestDuration>) = channel();
         let keep_running = Arc::new(RwLock::new(true));

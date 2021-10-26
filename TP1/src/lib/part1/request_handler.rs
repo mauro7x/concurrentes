@@ -1,3 +1,5 @@
+//! Proxy entity in charge of delegating requests to WebServices.
+
 use std::thread::{self, JoinHandle};
 
 use crate::common::utils::*;
@@ -9,7 +11,13 @@ use crate::part1::{
     request::Request,
 };
 
+/// Invalid request structure
 pub struct InvalidRequest;
+
+/// RequestHandler is an entity that acts as a middleware between the distpatcher
+/// and the webservices. It's in charge of spawning a thread for each incomming
+/// request and holding those references for latter joinning. Some side functionalities
+/// include logging and metrics collecting.
 
 pub struct RequestHandler {
     logger_sender: LoggerSender,
@@ -53,6 +61,8 @@ fn handler(
 }
 
 impl RequestHandler {
+    /// Given a Hash of Airlines' Webservices, a Hotel Webservice, a LoggerSender and a MetricsSender
+    /// this function resturns a new instance of a RequestHandler.
     pub fn new(
         airlines: Airlines,
         hotel: Hotel,
@@ -68,6 +78,8 @@ impl RequestHandler {
             hotel,
         }
     }
+    /// This method spawns a thread for each incomming requests and delegates to the
+    /// corresponding WebService(s).
 
     pub fn handle(&mut self, req: Request) -> Result<(), InvalidRequest> {
         let airline = self.airlines.get(&req.airline).ok_or(InvalidRequest)?;
@@ -96,6 +108,8 @@ impl RequestHandler {
 
         Ok(())
     }
+
+    /// Join all thread requests.
 
     pub fn join(mut self) {
         for join_handler in self.threads {

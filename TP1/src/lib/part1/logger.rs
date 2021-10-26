@@ -1,3 +1,5 @@
+//! System logging entities.
+
 use std::{
     error::Error,
     fs::{File, OpenOptions},
@@ -8,16 +10,26 @@ use std::{
 
 use crate::common::{config::LoggerConfig, utils};
 
+/// Logger is an entity that keeps a reference to the thread
+/// that handles the logging. The thread writes to a file and prints to stdout
+/// each log that processes. A channel is used for communication.
+
 pub struct Logger {
     handler: JoinHandle<()>,
     tx: Sender<String>,
 }
+
+/// LoggerSender holds a reference to the channel that handles the communication
+/// with the logger thread.
+
 #[derive(Clone)]
 pub struct LoggerSender {
     tx: Sender<String>,
 }
 
 impl Logger {
+    /// Given a LoggerConfig this method will create a Logger entity, open the associated file and spawn a thread.
+
     pub fn from_config(config: LoggerConfig) -> Result<Logger, Box<dyn Error>> {
         let path = format!("{}/part1-{}.txt", config.dirpath, utils::now_rfc());
         let file = OpenOptions::new()
@@ -45,11 +57,15 @@ impl Logger {
                 .expect("[CRITICAL] Write to file failed");
         }
     }
+    /// Get Sender copy for Logger communication channel.
+
     pub fn get_sender(&self) -> LoggerSender {
         LoggerSender {
             tx: self.tx.clone(),
         }
     }
+    /// Join thread responsible for logging.
+
     pub fn join(self) {
         drop(self.tx);
         self.handler
