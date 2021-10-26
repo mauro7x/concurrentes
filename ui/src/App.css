@@ -167,9 +167,8 @@ ul {
 	cursor: pointer;
 	transition: all 0.7s;
 	border: none;
-
 	width: 100%;
-	height: 33%;
+	height: 25%;
 	display: block;
 }
 
@@ -178,7 +177,11 @@ ul {
 	border-top-right-radius: 2rem;
 }
 
-.RequestPoster .actions button.mid-action {
+.RequestPoster .actions button.mid1-action {
+	border-top: 1px solid #39a2db;
+}
+
+.RequestPoster .actions button.mid2-action {
 	border-top: 1px solid #39a2db;
 	border-bottom: 1px solid #39a2db;
 }
@@ -191,3 +194,10 @@ ul {
 .RequestPoster .actions button:hover {
 	background-color: #39a2db;
 }
+
+.RequestPoster .actions button.btn-disabled {
+	cursor: default;
+	background-color: #020e11;
+	color: grey;
+}
+

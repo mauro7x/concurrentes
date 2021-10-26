@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const url = (path) => new URL(path, 'https://alglobo.herokuapp.com/').href;
 
-export const postRequest = ({ origin, destiny, airline, package: hotel }) =>
+const postRequest = ({ origin, destiny, airline, package: hotel }) =>
 	axios
 		.post(url('/request'), {
 			origin,
@@ -16,7 +16,7 @@ export const postRequest = ({ origin, destiny, airline, package: hotel }) =>
 			return msg ?? null;
 		});
 
-export const getRequest = async (reqId) =>
+const getRequest = async (reqId) =>
 	axios
 		.get(url('/request'), {
 			params: {
@@ -29,11 +29,22 @@ export const getRequest = async (reqId) =>
 			return msg ?? null;
 		});
 
-export const postRequests = async (reqs) => {
-	const promises = reqs.map((req) => postRequest(req));
+export const getMetrics = async () =>
+axios
+	.get(url('/metrics'))
+	.then(({ data }) => JSON.stringify(data, null, 2))
+	.catch((err) => {
+		const msg = err.response?.data;
+		return msg ?? null;
+	});		
+
+const fnForReq = (fn) => async (reqs) => {
+	const promises = reqs.map((req) => fn(req));
 	const responses = await Promise.all(promises);
 
 	return responses;
-};
+}
 
-export const getRequests = async (reqs) => {};
+export const postRequests = async (reqs) => fnForReq(postRequest)(reqs);
+export const getRequests = async (reqs) => fnForReq(getRequest)(reqs);
+

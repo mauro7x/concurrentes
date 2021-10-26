@@ -7,7 +7,7 @@ const TP1Tab = () => {
 			<div className='title'>
 				<p className='left'>
 					Struct{' '}
-					<a href='/' className='link'>
+					<a href='#' className='link'>
 						lib::tp1::AlGlobo
 					</a>
 				</p>

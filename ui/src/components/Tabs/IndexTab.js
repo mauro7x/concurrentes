@@ -6,7 +6,7 @@ const IndexTab = () => {
 			<div className='title'>
 				<p className='left'>
 					Crate{' '}
-					<a href='/' className='link'>
+					<a href='#' className='link'>
 						context_switch
 					</a>
 				</p>
