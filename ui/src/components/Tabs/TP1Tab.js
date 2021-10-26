@@ -1,4 +1,5 @@
 import React from 'react';
+import RequestPoster from '../RequestPoster/RequestPoster';
 
 const TP1Tab = () => {
 	return (
@@ -10,17 +11,13 @@ const TP1Tab = () => {
 						lib::tp1::AlGlobo
 					</a>
 				</p>
-				<p
-					className='right src'
-					onClick={() => alert('Tampoco vamos a clonar docs.rs...')}
-				>
-					[-][src]
-				</p>
+				<p className='right src'>[-][src]</p>
 			</div>
 			<p>
 				Microservicio que expone una REST API para utilizar el sistema de
 				reservas de AlGlobo.
 			</p>
+			<RequestPoster />
 		</div>
 	);
 };

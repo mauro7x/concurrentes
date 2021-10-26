@@ -119,7 +119,6 @@ ul.nav li.active {
 
 .Tab .src {
 	color: black;
-	cursor: pointer;
 }
 
 .Tab p,
@@ -132,4 +131,63 @@ ul {
 
 .Tab ul {
 	margin: 1rem 4rem;
+}
+
+/* RequestPoster */
+.RequestPoster {
+	margin: 1rem 0rem;
+	display: flex;
+}
+
+.RequestPoster .console {
+	resize: none;
+	background-color: #020e11;
+	color: white;
+	width: 50%;
+	height: auto;
+	font-size: 1.5rem;
+}
+
+.RequestPoster div.actions {
+	margin: 0rem 1rem;
+	border: 1px solid #39a2db;
+	border-radius: 2rem;
+}
+
+.RequestPoster .actions button {
+	padding: 1rem;
+	background-color: transparent;
+	color: white;
+	white-space: normal;
+	word-wrap: break-word;
+	list-style: none;
+	font-family: 'Courier New', Courier, monospace;
+	font-size: 1.2rem;
+	text-align: center;
+	cursor: pointer;
+	transition: all 0.7s;
+	border: none;
+
+	width: 100%;
+	height: 33%;
+	display: block;
+}
+
+.RequestPoster .actions button.up-action {
+	border-top-left-radius: 2rem;
+	border-top-right-radius: 2rem;
+}
+
+.RequestPoster .actions button.mid-action {
+	border-top: 1px solid #39a2db;
+	border-bottom: 1px solid #39a2db;
+}
+
+.RequestPoster .actions button.down-action {
+	border-bottom-left-radius: 2rem;
+	border-bottom-right-radius: 2rem;
+}
+
+.RequestPoster .actions button:hover {
+	background-color: #39a2db;
 }

@@ -10,12 +10,7 @@ const IndexTab = () => {
 						context_switch
 					</a>
 				</p>
-				<p
-					className='right src'
-					onClick={() => alert('Tampoco vamos a clonar docs.rs...')}
-				>
-					[-][src]
-				</p>
+				<p className='right src'>[-][src]</p>
 			</div>
 			<p>Grupo conformado por:</p>
 			<ul>
