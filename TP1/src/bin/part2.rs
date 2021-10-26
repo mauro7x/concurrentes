@@ -1,7 +1,8 @@
 use std::env;
 
 use actix::Actor;
-use actix_web::{middleware, web::Data, App, HttpServer};
+use actix_cors::Cors;
+use actix_web::{web::Data, App, HttpServer};
 
 use lib::common::{config::GeneralConfig, paths};
 use lib::part2::{
@@ -33,6 +34,8 @@ async fn main() -> std::io::Result<()> {
     let request_handler = RequestHandler::new(logger.clone(), status_service.clone()).start();
 
     HttpServer::new(move || {
+        let cors = Cors::permissive();
+
         App::new()
             .app_data(Data::new(ServerState::new(
                 request_handler.clone(),
@@ -40,7 +43,7 @@ async fn main() -> std::io::Result<()> {
                 logger.clone(),
                 metrics_collector.clone(),
             )))
-            .wrap(middleware::DefaultHeaders::new().header("Access-Control-Allow-Origin", "*"))
+            .wrap(cors)
             .service(get_index)
             .service(get_metrics)
             .service(post_request)
