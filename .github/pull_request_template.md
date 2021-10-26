@@ -7,4 +7,4 @@ Description.
 **(Remember to delete this section if it is not necessary)**
 Optionally, link issues.
 
-e.g.: Resolves #23
+> e.g.: Resolves #23

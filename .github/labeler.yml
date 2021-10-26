@@ -1,0 +1,14 @@
+# Main repository structure
+repository: '*'
+github: .github/**/*
+
+# Packages
+ui: ui/**/*
+tp1: TP1/**/*
+
+# Extensions
+.rust: '**/*.rs'
+.js: '**/*.js'
+
+# Any subfolder
+docs: '**/docs/**/*'
