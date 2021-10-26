@@ -1,9 +1,13 @@
+//! Module with server state.
+
 use actix::Addr;
 
 use crate::part2::{
     logger::Logger, metrics::MetricsCollector, request_handler::RequestHandler,
     status_service::StatusService,
 };
+
+/// Entity that collects references for all the parts needed for the system to work.
 
 pub struct ServerState {
     pub metrics_collector: Addr<MetricsCollector>,

@@ -1,3 +1,5 @@
+//! Module in charge of delegating petitions.
+
 use actix::{Actor, Addr, Context, Handler, Message};
 
 use crate::common::{paths, utils, utils::now};
@@ -13,6 +15,8 @@ use crate::part2::{
 
 // ACTOR ----------------------------------------------------------------------
 
+/// RequestHandler is an entity <Actor>. It will be in charge to proxy
+/// the request to its corresponding AirlineDispatcher or HotelDispatcher.
 pub struct RequestHandler {
     airlines: Airlines,
     hotel: Hotel,
@@ -29,6 +33,9 @@ impl Actor for RequestHandler {
 }
 
 impl RequestHandler {
+    /// Given an Addr Logger, Addr StatusService it will return a RequestHandler with its corresponding
+    /// Airlines Dispatchers, Hotel Dispatcher and associated services.
+
     pub fn new(logger: Addr<Logger>, status_service: Addr<StatusService>) -> Self {
         let airlines = airlines::from_path(
             paths::AIRLINES_CONFIG,
@@ -52,6 +59,8 @@ impl RequestHandler {
 
 #[derive(Message)]
 #[rtype(result = "Result<String, HandlerError>")]
+
+/// Message to dispatch a new petition to its corresponding WebService dispatcher.
 pub struct HandleRequest {
     pub raw_request: RawRequest,
 }

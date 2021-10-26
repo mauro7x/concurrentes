@@ -1,4 +1,4 @@
-//! System logging actor.
+//! System logging module.
 
 use std::{
     fs::{File, OpenOptions},
@@ -12,7 +12,7 @@ use crate::common::{config::LoggerConfig, utils};
 // ACTOR ----------------------------------------------------------------------
 
 /// Logger is an entity <Actor> that keeps a reference to the file
-/// that outputs the logging.
+/// that outputs the logging. It uses LogMessage to receive a log.
 
 pub struct Logger {
     file: File,

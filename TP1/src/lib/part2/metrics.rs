@@ -1,3 +1,10 @@
+//! Metrics collector entities.
+//!
+//! Metrics collected:
+//! * Mean request time
+//! * Top n routes
+//! * Number of requests
+
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -13,12 +20,15 @@ use crate::part2::logger::Logger;
 
 // TYPES ----------------------------------------------------------------------
 
+/// Struct that is used as hash index to keep track of metrics for that route.
+/// It has origin and destiny for request petition.
 #[derive(Serialize, Clone, PartialEq, Eq, Hash)]
 pub struct Route {
     origin: String,
     destiny: String,
 }
 
+/// Struct that is used to output top booked airline metrics.
 #[derive(Serialize)]
 pub struct RouteMetrics {
     route: Route,
@@ -35,6 +45,9 @@ struct Metrics {
     n_reqs: u64,
 }
 
+/// MetricsCollector is an entity <Actor>. It will be in charge of collecting
+/// metrics using MetricsMessage. It will also log periodically to stdout metrics status using inner calls.
+
 pub struct MetricsCollector {
     metrics: Metrics,
     printer_period: u64,
@@ -43,6 +56,8 @@ pub struct MetricsCollector {
 }
 
 impl MetricsCollector {
+    /// Given a MetricsCollectorConfig this method will create a MetricsCollector entity.
+
     pub fn new(
         MetricsCollectorConfig {
             printer_period,
@@ -61,6 +76,8 @@ impl MetricsCollector {
             logger_addr,
         }
     }
+
+    /// Given a MetricsCollector addr this method is used to send the actor current petition metrics.
 
     pub fn collect(
         metrics_collector: &Addr<MetricsCollector>,
@@ -160,10 +177,12 @@ impl Actor for MetricsCollector {
 
 // MESSAGES -------------------------------------------------------------------
 
+/// Message
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct LogMetrics;
+struct LogMetrics;
 
+/// Message to provide Metrics for a petition.
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct MetricsMessage {
@@ -173,6 +192,7 @@ pub struct MetricsMessage {
     destiny: String,
 }
 
+/// Response for GetMetrics message. It provides current status of those metrics.
 #[derive(Message, Serialize)]
 #[rtype(result = "()")]
 pub struct MetricsResponse {
@@ -181,6 +201,7 @@ pub struct MetricsResponse {
     pub most_booked_routes: MostBookedRoutes,
 }
 
+/// GetMetrics message to get current status metrics.
 #[derive(Message)]
 #[rtype(result = "Result<MetricsResponse, ()>")]
 pub struct GetMetrics;

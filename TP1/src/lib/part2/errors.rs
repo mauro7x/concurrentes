@@ -1,3 +1,5 @@
+//! Server output errors.
+
 pub enum HandlerError {
     AirlineNotFound,
     AirlineUnavailable,
