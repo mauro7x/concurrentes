@@ -7,7 +7,10 @@ on:
     paths:
       - TP1/src/**/*
   pull_request:
-    branches: [main]
+    branches:
+      - main
+    paths:
+      - TP1/src/**/*
 
 env:
   CARGO_TERM_COLOR: always
