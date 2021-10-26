@@ -1,6 +1,7 @@
 // Public
 pub mod errors;
 pub mod logger;
+pub mod metrics;
 pub mod request;
 pub mod request_handler;
 pub mod routes;

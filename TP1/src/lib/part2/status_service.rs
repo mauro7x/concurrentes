@@ -1,9 +1,13 @@
-use crate::part2::{
-    dispatcher::WebServiceType, errors::StatusServiceError, logger::Logger, request::Request,
-};
+use std::collections::HashMap;
+
 use actix::{Actor, Addr, Context, Handler, Message};
 use serde::Serialize;
-use std::collections::HashMap;
+
+use crate::common::utils::now;
+use crate::part2::{
+    dispatcher::WebServiceType, errors::StatusServiceError, logger::Logger,
+    metrics::MetricsCollector, request::Request,
+};
 
 // TYPES ----------------------------------------------------------------------
 
@@ -33,13 +37,15 @@ impl RequestStatus {
 pub struct StatusService {
     reqs: HashMap<String, RequestStatus>,
     logger: Addr<Logger>,
+    metrics_collector: Addr<MetricsCollector>,
 }
 
 impl StatusService {
-    pub fn new(logger: Addr<Logger>) -> Self {
+    pub fn new(logger: Addr<Logger>, metrics_collector: Addr<MetricsCollector>) -> Self {
         StatusService {
             reqs: HashMap::<String, RequestStatus>::new(),
             logger,
+            metrics_collector,
         }
     }
 }
@@ -128,6 +134,13 @@ impl Handler<BookSucceeded> for StatusService {
             Logger::send_to(
                 &self.logger,
                 format!("[StatusService] Finished request {}", req.id),
+            );
+            MetricsCollector::collect(
+                &self.metrics_collector,
+                req.start_time,
+                now(),
+                req.raw_request.origin,
+                req.raw_request.destiny,
             );
         }
     }

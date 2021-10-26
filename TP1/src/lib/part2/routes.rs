@@ -1,9 +1,9 @@
 use actix_web::{get, post, web, HttpResponse, Responder};
-
 use serde::{Deserialize, Serialize};
 
 use crate::part2::{
     errors::*,
+    metrics::GetMetrics,
     request::{RawRequest, Request},
     request_handler::HandleRequest,
     state::ServerState,
@@ -37,8 +37,17 @@ pub async fn get_index() -> impl Responder {
 // GET METRICS ----------------------------------------------------------------
 
 #[get("/metrics")]
-pub async fn get_metrics() -> impl Responder {
-    HttpResponse::Ok().body("Metrics page")
+pub async fn get_metrics(state: web::Data<ServerState>) -> impl Responder {
+    let msg = GetMetrics {};
+    match state.metrics_collector.send(msg).await {
+        Ok(Ok(metrics_response)) => HttpResponse::Ok().json(metrics_response),
+        Ok(Err(_)) => {
+            HttpResponse::InternalServerError().body("Metrics Collector error".to_string())
+        }
+        Err(err) => {
+            HttpResponse::InternalServerError().body(format!("Internal Server Error: {}", err))
+        }
+    }
 }
 
 // POST REQUEST ---------------------------------------------------------------
@@ -91,6 +100,7 @@ pub async fn get_request(
             req:
                 Request {
                     id,
+                    start_time: _,
                     raw_request:
                         RawRequest {
                             origin,

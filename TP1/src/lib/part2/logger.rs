@@ -62,7 +62,7 @@ impl Handler<LogMessage> for Logger {
     type Result = ();
 
     fn handle(&mut self, msg: LogMessage, _ctx: &mut Context<Self>) {
-        let c = msg.0 + "\n";
+        let c = format!("[{}] {}\n", utils::now_h_m_s(), msg.0);
         print!("{}", c);
         self.file
             .write_all(c.as_bytes())
