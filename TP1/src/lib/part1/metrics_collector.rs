@@ -113,27 +113,40 @@ impl MetricsCollector {
     }
 
     fn print_metrics(metrics_lock: &Arc<RwLock<Metrics>>, n: usize) {
-        let mut most_booked_routes_msg: String = "".to_owned();
         let metrics = metrics_lock
             .read()
             .expect("[CRITICAL] Printer could not read metrics lock");
+
+        let n_reqs = metrics.n_reqs;
         let routes_by_bookings =
             MetricsCollector::get_n_most_booked_routes(&metrics.routes_booking_count, n);
 
-        for route in routes_by_bookings {
-            most_booked_routes_msg += &format!("- {}/{} ({}) ", route.0 .0, route.0 .1, route.1);
-        }
-
-        println!(
-            "[METRICS] Requests successfully processed: {} reqs",
-            metrics.n_reqs
+        let mut most_booked_routes_msg: String = format!(
+            "{:=^36}\n|{:^4}|{:^9}|{:^9}|{:^9}|\n{:=^36}",
+            "", "Nº", "ORIGIN", "DESTINY", "#", ""
         );
-        if metrics.n_reqs != 0 {
-            println!(
-                "[METRICS] Mean time to book: {} ms",
-                metrics.reqs_duration_cumsum / (metrics.n_reqs as i64)
+
+        for (i, route) in routes_by_bookings.iter().enumerate() {
+            let ((origin, destiny), amount) = route;
+
+            most_booked_routes_msg += &format!(
+                "\n|{:^4}|{:^9}|{:^9}|{:^9}|",
+                i + 1,
+                origin,
+                destiny,
+                amount
             );
-            println!("[METRICS] Most booked routes: {}", most_booked_routes_msg);
+        }
+        most_booked_routes_msg += &format!("\n{:=^36}", "");
+
+        println!("Requests successfully processed: {} reqs", n_reqs);
+
+        if n_reqs > 0 {
+            println!(
+                "Mean time to book: {} ms",
+                metrics.reqs_duration_cumsum / (n_reqs as i64)
+            );
+            println!("Most booked routes:\n{}", most_booked_routes_msg);
         };
     }
 
