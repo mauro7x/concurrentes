@@ -51,8 +51,8 @@ impl Logger {
     }
     fn write_to_log(rx: Receiver<String>, mut file: File) {
         while let Ok(msg) = rx.recv() {
-            let c = msg.clone() + "\n";
-            // print!("{}", c);
+            let c = format!("[{}] {}\n", utils::now_h_m_s(), msg);
+            print!("{}", c);
             file.write_all(c.as_bytes())
                 .expect("[CRITICAL] Write to file failed");
         }
