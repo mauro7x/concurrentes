@@ -1,6 +1,8 @@
-# Técnicas de Programación Concurrente
+# [Técnicas de Programación Concurrente](https://mauro7x.github.io/concurrentes/)
 
 Trabajos prácticos de la materia [**Técnicas de Programación Concurrente I**](https://concurrentes-fiuba.github.io) en el Segundo Cuatrimestre del año 2021, dictada en la Facultad de Ingeniería, Universidad de Buenos Aires.
+
+[¡Accede a nuestra página web!](https://mauro7x.github.io/concurrentes/)
 
 
 ## Integrantes :busts_in_silhouette:
