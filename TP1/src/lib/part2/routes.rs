@@ -1,3 +1,5 @@
+//! Module with actix request handlers.
+
 use actix_web::{get, post, web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 

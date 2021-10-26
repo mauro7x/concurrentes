@@ -1,3 +1,5 @@
+//! System logging module.
+
 use std::{
     fs::{File, OpenOptions},
     io::Write,
@@ -9,11 +11,16 @@ use crate::common::{config::LoggerConfig, utils};
 
 // ACTOR ----------------------------------------------------------------------
 
+/// Logger is an entity <Actor> that keeps a reference to the file
+/// that outputs the logging. It uses LogMessage to receive a log.
+
 pub struct Logger {
     file: File,
 }
 
 impl Logger {
+    /// Given a LoggerConfig this method will create a Logger entity, openning the associated file.
+
     pub fn new(config: LoggerConfig) -> Self {
         let path = format!("{}/part2-{}.txt", config.dirpath, utils::now_rfc());
         let file = OpenOptions::new()
@@ -24,6 +31,8 @@ impl Logger {
 
         Logger { file }
     }
+
+    /// Creates a LoggerMessage and sends it to the logger passed as argument.
 
     pub fn send_to(logger: &Addr<Logger>, msg: String) {
         if logger.try_send(LogMessage(msg)).is_err() {
@@ -42,6 +51,7 @@ impl Actor for Logger {
 
 // MESSAGES -------------------------------------------------------------------
 
+/// Message to log.
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct LogMessage(pub String);
