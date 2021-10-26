@@ -1,13 +1,35 @@
 import axios from 'axios';
 
-// const url = (path) => new URL(path, 'https://alglobo.herokuapp.com/').href;
-const url = (path) => new URL(path, 'http://localhost:8081/').href;
+const url = (path) => new URL(path, 'https://alglobo.herokuapp.com/').href;
 
-const postRequest = (req) => {
-	console.log('fetching:', url);
-	return axios.get(url('/metrics'));
-};
-const getRequest = (req) => {};
+export const postRequest = ({ origin, destiny, airline, package: hotel }) =>
+	axios
+		.post(url('/request'), {
+			body: {
+				origin,
+				destiny,
+				airline,
+				package: hotel
+			}
+		})
+		.then(({ data }) => data)
+		.catch((err) => {
+			console.error(err);
+			return null;
+		});
 
-export const postRequests = async (reqs) => postRequest();
+export const getRequest = async (reqId) =>
+	axios
+		.get(url('/request'), {
+			params: {
+				id: reqId
+			}
+		})
+		.then(({ data }) => data)
+		.catch((err) => {
+			console.error(err);
+			return null;
+		});
+
+export const postRequests = async (reqs) => {};
 export const getRequests = async (reqs) => {};

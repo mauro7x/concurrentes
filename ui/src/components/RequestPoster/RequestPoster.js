@@ -1,14 +1,25 @@
 import React, { useState } from 'react';
 import { inputPlaceholder, outputPlaceholder } from './placeholders';
-import { getRequests, postRequests } from '../../utils/algloboGateway';
+import {
+	getRequest,
+	getRequests,
+	postRequest,
+	postRequests
+} from '../../utils/algloboGateway';
 
 const RequestPoster = () => {
 	const [inputValue, setInputValue] = useState('');
 	const [outputValue, setOutputValue] = useState('');
 
 	const onSend = async () => {
-		postRequests();
-		alert('tenemo response!');
+		const data = await getRequest('asdasd');
+		// const data = await postRequest({
+		// 	origin: 'EZE',
+		// 	destiny: 'JFK',
+		// 	airline: 'American Airlines',
+		// 	package: true
+		// });
+		console.log(data);
 	};
 	const onCheckStatus = async () => alert('Check Status');
 	const onClean = () => {
