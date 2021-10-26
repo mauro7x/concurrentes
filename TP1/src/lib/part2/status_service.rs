@@ -1,3 +1,5 @@
+//! Module for status service.
+
 use std::collections::HashMap;
 
 use actix::{Actor, Addr, Context, Handler, Message};
@@ -13,6 +15,7 @@ use crate::part2::{
 
 pub struct RequestNotFound;
 
+/// Provides a status for a given request
 #[derive(Clone, Serialize)]
 pub struct RequestStatus {
     pub req: Request,
@@ -33,6 +36,9 @@ impl RequestStatus {
 }
 
 // ACTOR ----------------------------------------------------------------------
+
+/// RequestStatus is an entity <Actor>. It will be in charge of collecting
+/// finished status for all requests. It will also be communicating with Log and Metrics Actors.
 
 pub struct StatusService {
     reqs: HashMap<String, RequestStatus>,
@@ -60,12 +66,14 @@ impl Actor for StatusService {
 
 // MESSAGES -------------------------------------------------------------------
 
+/// Message that indicates a new request started.
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct NewRequest {
     pub req: Request,
 }
 
+/// Message that indicates that a webservice book succeded.
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct BookSucceeded {
@@ -73,6 +81,7 @@ pub struct BookSucceeded {
     pub req: Request,
 }
 
+/// Message to get request finish status.
 #[derive(Message)]
 #[rtype(result = "Result<RequestStatus, StatusServiceError>")]
 pub struct GetStatus {
