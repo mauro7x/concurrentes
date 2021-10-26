@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import {  inputPlaceholder, outputPlaceholder, invalidInputMsg, noResponsesMsg } from './messages';
+import {
+	inputPlaceholder,
+	outputPlaceholder,
+	invalidInputMsg,
+	noResponsesMsg
+} from './messages';
 import {
 	getMetrics,
 	getRequests,
@@ -12,7 +17,7 @@ const RequestPoster = () => {
 	const [inputValue, setInputValue] = useState('');
 	const [outputValue, setOutputValue] = useState('');
 	const [reqIds, setReqIds] = useState([]);
-	const [fetching, setFetching] = useState(false)
+	const [fetching, setFetching] = useState(false);
 
 	const onSend = async () => {
 		const reqs = parseInputRequests(inputValue);
@@ -29,13 +34,13 @@ const RequestPoster = () => {
 			''
 		);
 		const validIds = validReqIds(responses);
-		setReqIds(validIds)
+		setReqIds(validIds);
 		setOutputValue(`[POST /requests] SERVER OUTPUT:\n\n${output}`);
 		setFetching(false);
 	};
 	const onCheckStatus = async () => {
 		if (!reqIds.length) {
-			setOutputValue(noResponsesMsg)
+			setOutputValue(noResponsesMsg);
 			setFetching(false);
 			return;
 		}
@@ -43,7 +48,8 @@ const RequestPoster = () => {
 		setFetching(true);
 		const responses = await getRequests(reqIds);
 		const output = responses.reduce(
-			(msg, response) => `${msg}${msg ? ',\n' : ''}${JSON.stringify(response, null, 2)}`,
+			(msg, response) =>
+				`${msg}${msg ? ',\n' : ''}${JSON.stringify(response, null, 2)}`,
 			''
 		);
 		setOutputValue(`[GET /requests] SERVER OUTPUT:\n\n${output}`);
@@ -54,11 +60,11 @@ const RequestPoster = () => {
 		const metrics = await getMetrics();
 		setOutputValue(`[GET /metrics] SERVER OUTPUT:\n\n${metrics}`);
 		setFetching(false);
-	}
+	};
 	const onClean = () => {
 		setInputValue('');
 		setOutputValue('');
-		setReqIds([])
+		setReqIds([]);
 	};
 
 	const handleInputChange = (event) => {
@@ -78,7 +84,9 @@ const RequestPoster = () => {
 			<div className='actions'>
 				<button
 					disabled={inputValue === '' || fetching}
-					className={`up-action ${inputValue === '' || fetching ? 'btn-disabled' : ''}`}
+					className={`up-action ${
+						inputValue === '' || fetching ? 'btn-disabled' : ''
+					}`}
 					onClick={() => {
 						setFetching(true);
 						onSend();
@@ -86,19 +94,33 @@ const RequestPoster = () => {
 				>
 					Enviar
 				</button>
-				<button disabled={!reqIds.length || fetching} onClick={() => {
-					setFetching(true);
-					onCheckStatus();
-					}} className={`mid1-action ${!reqIds.length || fetching ? 'btn-disabled' : ''}`}>
+				<button
+					disabled={!reqIds.length || fetching}
+					onClick={() => {
+						setFetching(true);
+						onCheckStatus();
+					}}
+					className={`mid1-action ${
+						!reqIds.length || fetching ? 'btn-disabled' : ''
+					}`}
+				>
 					Chequear estado
 				</button>
-				<button disabled={fetching} onClick={() => {
-					setFetching(true);
-					onGetMetrics();
-					}} className={`mid2-action ${fetching ? 'btn-disabled' : ''}`}>
+				<button
+					disabled={fetching}
+					onClick={() => {
+						setFetching(true);
+						onGetMetrics();
+					}}
+					className={`mid2-action ${fetching ? 'btn-disabled' : ''}`}
+				>
 					Solicitar métricas
 				</button>
-				<button disabled={fetching} onClick={() => onClean()} className={`down-action ${fetching ? 'btn-disabled' : ''}`}>
+				<button
+					disabled={fetching}
+					onClick={() => onClean()}
+					className={`down-action ${fetching ? 'btn-disabled' : ''}`}
+				>
 					Limpiar
 				</button>
 			</div>

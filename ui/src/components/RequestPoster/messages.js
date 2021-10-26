@@ -1,9 +1,10 @@
 const csvFormat = `origin,destiny,airline,package`;
+
 const example = `Ej:
 EZE,JFK,American Airlines,false
 EZE,GRU,LATAM,true`;
 
-// Exports
+// Exported messages
 
 export const inputPlaceholder = `INPUT
 Ingrese requests en cada linea utilizando el siguiente formato csv:
@@ -20,7 +21,7 @@ El input es inválido. Cada linea debe ser una request en el siguiente formato c
 
 ${csvFormat}
 
-${example}`
+${example}`;
 
 export const noResponsesMsg = `ERROR: NO HAY REQUESTS
-Para chequear el estado, primero se debe enviar con un input valido un grupo de requests con al menos una.`
+Para chequear el estado, primero se debe enviar con un input valido un grupo de requests con al menos una.`;
