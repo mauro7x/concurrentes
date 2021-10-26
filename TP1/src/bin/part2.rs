@@ -19,7 +19,8 @@ async fn main() -> std::io::Result<()> {
         port,
         logger_config,
         metrics_collector_config,
-    } = GeneralConfig::from_path(paths::GENERAL).expect("[CRITICAL] Error reading general config");
+    } = GeneralConfig::from_path(paths::GENERAL_CONFIG)
+        .expect("[CRITICAL] Error reading general config");
 
     let port = match env::var("PORT") {
         Ok(var) => var.parse::<u16>().expect("[CRITICAL] Invalid PORT env var"),

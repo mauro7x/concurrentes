@@ -1,4 +1,4 @@
-use std::{error::Error, process};
+use std::{env, error::Error, process};
 
 use lib::common::{config::GeneralConfig, paths};
 
@@ -7,11 +7,13 @@ use lib::part1::{
 };
 
 fn run() -> Result<(), Box<dyn Error>> {
+    let args: Vec<String> = env::args().collect();
+
     let GeneralConfig {
         port: _,
         logger_config,
         metrics_collector_config,
-    } = GeneralConfig::from_path(paths::GENERAL)?;
+    } = GeneralConfig::from_path(paths::GENERAL_CONFIG)?;
 
     let logger = logger::Logger::from_config(logger_config)?;
     let metrics_collector =
@@ -25,7 +27,23 @@ fn run() -> Result<(), Box<dyn Error>> {
         metrics_collector.get_sender(),
     );
 
-    dispatcher::from_path(paths::REQUESTS, &mut req_handler)?;
+    let path = match args.get(1) {
+        Some(path) => {
+            logger
+                .get_sender()
+                .send(format!("Using requests file received (path: {})", path));
+            path
+        }
+        None => {
+            logger.get_sender().send(format!(
+                "No requests file received, using default one (path: {})",
+                paths::DEFAULT_REQUESTS
+            ));
+            paths::DEFAULT_REQUESTS
+        }
+    };
+
+    dispatcher::from_path(path, &mut req_handler)?;
 
     req_handler.join();
     logger.join();
