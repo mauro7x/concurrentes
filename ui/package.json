@@ -2,7 +2,7 @@
 	"name": "@alglobo/ui",
 	"version": "1.0.0",
 	"description": "",
-  "main": ".src/index.js",
+	"main": ".src/index.js",
 	"scripts": {
 		"build": "webpack",
 		"dev": "NODE_ENV=development webpack serve",
@@ -20,14 +20,17 @@
 	},
 	"homepage": "https://github.com/mauro7x/concurrentes.git",
 	"dependencies": {
+		"axios": "^0.24.0",
 		"config": "^3.3.6",
 		"react": "^17.0.2",
 		"react-dom": "^17.0.2"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.15.5",
+		"@babel/plugin-transform-runtime": "^7.15.8",
 		"@babel/preset-env": "^7.15.6",
 		"@babel/preset-react": "^7.14.5",
+		"@babel/runtime": "^7.15.4",
 		"babel-loader": "^8.2.2",
 		"css-loader": "^6.2.0",
 		"eslint": "^7.32.0",
