@@ -1,29 +1,45 @@
-import React from 'react';
-
-const inputPlaceholder = `INPUT
-Ingrese requests en cada linea utilizando el siguiente formato csv:
-
-origin,destiny,airline,package
-
-Ej:
-EZE,JFK,American Airlines,false
-EZE,GRU,LATAM,true
-`;
-const outputPlaceholder = `Output
-`;
+import React, { useState } from 'react';
+import { inputPlaceholder, outputPlaceholder } from './placeholders';
+import { getRequests, postRequests } from '../../utils/algloboGateway';
 
 const RequestPoster = () => {
+	const [inputValue, setInputValue] = useState('');
+	const [outputValue, setOutputValue] = useState('');
+
+	const onSend = async () => {
+		postRequests();
+		alert('tenemo response!');
+	};
+	const onCheckStatus = async () => alert('Check Status');
+	const onClean = () => {
+		setInputValue('');
+		setOutputValue('');
+	};
+
+	const handleInputChange = (event) => {
+		const { value } = event.target;
+		setInputValue(value);
+	};
+
 	return (
 		<div className='RequestPoster'>
 			<textarea
+				value={inputValue}
+				onChange={handleInputChange}
 				rows='10'
 				className='input console'
 				placeholder={inputPlaceholder}
 			/>
 			<div className='actions'>
-				<button className='up-action'>Enviar</button>
-				<button className='mid-action'>Chequear estado</button>
-				<button className='down-action'>Limpiar</button>
+				<button className='up-action' onClick={() => onSend()}>
+					Enviar
+				</button>
+				<button onClick={() => onCheckStatus} className='mid-action'>
+					Chequear estado
+				</button>
+				<button onClick={() => onClean} className='down-action'>
+					Limpiar
+				</button>
 			</div>
 
 			<textarea
