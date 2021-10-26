@@ -1,6 +1,10 @@
 use std::collections::HashMap;
+use std::time::Duration;
 
-use actix::{Actor, Addr, Context, Handler, Message};
+use actix::{
+    clock::sleep, Actor, ActorFutureExt, Addr, AsyncContext, Context, Handler, Message,
+    ResponseActFuture, WrapFuture,
+};
 use actix_web::Result;
 use serde::Serialize;
 
@@ -33,19 +37,27 @@ struct Metrics {
 
 pub struct MetricsCollector {
     metrics: Metrics,
-    config: MetricsCollectorConfig,
+    printer_period: u64,
+    n_most_booked: usize,
     logger_addr: Addr<Logger>,
 }
 
 impl MetricsCollector {
-    pub fn new(config: MetricsCollectorConfig, logger_addr: Addr<Logger>) -> Self {
+    pub fn new(
+        MetricsCollectorConfig {
+            printer_period,
+            n_most_booked,
+        }: MetricsCollectorConfig,
+        logger_addr: Addr<Logger>,
+    ) -> Self {
         MetricsCollector {
             metrics: Metrics {
                 routes_booking_count: HashMap::new(),
                 reqs_duration_cumsum: 0,
                 n_reqs: 0,
             },
-            config,
+            printer_period,
+            n_most_booked,
             logger_addr,
         }
     }
@@ -72,7 +84,7 @@ impl MetricsCollector {
 
     fn get_n_most_booked_routes(&self) -> MostBookedRoutes {
         let routes_booking_count = &self.metrics.routes_booking_count;
-        let n = self.config.n_most_booked;
+        let n = self.n_most_booked;
 
         let mut routes_booking_count_vec: Vec<(&Route, &u64)> =
             routes_booking_count.iter().collect();
@@ -87,13 +99,62 @@ impl MetricsCollector {
             })
             .collect()
     }
+
+    fn log_metrics(&self) {
+        let n_reqs = self.metrics.n_reqs;
+        let most_booked_routes = self.get_n_most_booked_routes();
+
+        let mut most_booked_routes_msg: String = format!(
+            "{:=^36}\n|{:^4}|{:^9}|{:^9}|{:^9}|\n{:=^36}",
+            "", "Nº", "ORIGIN", "DESTINY", "#", ""
+        );
+
+        for (
+            i,
+            RouteMetrics {
+                route: Route { origin, destiny },
+                amount,
+            },
+        ) in most_booked_routes.iter().enumerate()
+        {
+            most_booked_routes_msg += &format!(
+                "\n|{:^4}|{:^9}|{:^9}|{:^9}|",
+                i + 1,
+                origin,
+                destiny,
+                amount
+            );
+        }
+        most_booked_routes_msg += &format!("\n{:=^36}", "");
+
+        Logger::send_to(
+            &self.logger_addr,
+            format!("Requests successfully processed: {} reqs", n_reqs),
+        );
+        if n_reqs > 0 {
+            Logger::send_to(
+                &self.logger_addr,
+                format!(
+                    "Mean time to book: {} ms",
+                    self.metrics.reqs_duration_cumsum / (n_reqs as i64)
+                ),
+            );
+            Logger::send_to(
+                &self.logger_addr,
+                format!("Most booked routes:\n{}", most_booked_routes_msg),
+            );
+        };
+    }
 }
 
 impl Actor for MetricsCollector {
     type Context = Context<Self>;
 
-    fn started(&mut self, _ctx: &mut Self::Context) {
+    fn started(&mut self, ctx: &mut Self::Context) {
         Logger::send_to(&self.logger_addr, "[MetricsCollector] Started".to_string());
+        ctx.address()
+            .try_send(LogMetrics {})
+            .expect("[CRITICAL] Could not auto-send LogMetrics msg to MetricsCollector");
     }
 }
 
@@ -101,7 +162,10 @@ impl Actor for MetricsCollector {
 
 #[derive(Message)]
 #[rtype(result = "()")]
+pub struct LogMetrics;
 
+#[derive(Message)]
+#[rtype(result = "()")]
 pub struct MetricsMessage {
     start_time: i64,
     end_time: i64,
@@ -122,6 +186,25 @@ pub struct MetricsResponse {
 pub struct GetMetrics;
 
 // HANDLERS -------------------------------------------------------------------
+
+impl Handler<LogMetrics> for MetricsCollector {
+    type Result = ResponseActFuture<Self, ()>;
+
+    fn handle(&mut self, _msg: LogMetrics, _ctx: &mut Context<Self>) -> Self::Result {
+        self.log_metrics();
+
+        // Loop with printer_period time
+        Box::pin(
+            sleep(Duration::from_millis(self.printer_period))
+                .into_actor(self)
+                .map(move |_result, _me, ctx| {
+                    ctx.address().try_send(LogMetrics {}).expect(
+                        "[CRITICAL] Could not auto-send LogMetrics msg to MetricsCollector",
+                    );
+                }),
+        )
+    }
+}
 
 impl Handler<MetricsMessage> for MetricsCollector {
     type Result = ();
