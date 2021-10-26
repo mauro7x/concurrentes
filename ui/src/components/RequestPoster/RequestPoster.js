@@ -7,19 +7,23 @@ import {
 	postRequests
 } from '../../utils/algloboGateway';
 
+import { parseInputRequests } from '../../utils/parser';
+
 const RequestPoster = () => {
 	const [inputValue, setInputValue] = useState('');
 	const [outputValue, setOutputValue] = useState('');
 
 	const onSend = async () => {
-		const data = await getRequest('asdasd');
-		// const data = await postRequest({
-		// 	origin: 'EZE',
-		// 	destiny: 'JFK',
-		// 	airline: 'American Airlines',
-		// 	package: true
-		// });
-		console.log(data);
+		const reqs = parseInputRequests(inputValue);
+		if (!reqs) {
+			setOutputValue('Invalid request found');
+		}
+		const responses = await postRequests(reqs);
+		const output = responses.reduce(
+			(msg, response) => `${msg}${msg ? '\n' : ''}${response}`,
+			''
+		);
+		setOutputValue(output);
 	};
 	const onCheckStatus = async () => alert('Check Status');
 	const onClean = () => {
@@ -42,7 +46,11 @@ const RequestPoster = () => {
 				placeholder={inputPlaceholder}
 			/>
 			<div className='actions'>
-				<button className='up-action' onClick={() => onSend()}>
+				<button
+					disabled={inputValue === ''}
+					className='up-action'
+					onClick={() => onSend()}
+				>
 					Enviar
 				</button>
 				<button onClick={() => onCheckStatus} className='mid-action'>
@@ -56,6 +64,7 @@ const RequestPoster = () => {
 			<textarea
 				rows='10'
 				className='output console'
+				value={outputValue}
 				readOnly
 				placeholder={outputPlaceholder}
 			/>

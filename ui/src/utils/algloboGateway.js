@@ -5,17 +5,15 @@ const url = (path) => new URL(path, 'https://alglobo.herokuapp.com/').href;
 export const postRequest = ({ origin, destiny, airline, package: hotel }) =>
 	axios
 		.post(url('/request'), {
-			body: {
-				origin,
-				destiny,
-				airline,
-				package: hotel
-			}
+			origin,
+			destiny,
+			airline,
+			package: hotel
 		})
 		.then(({ data }) => data)
 		.catch((err) => {
-			console.error(err);
-			return null;
+			const msg = err.response?.data;
+			return msg ?? null;
 		});
 
 export const getRequest = async (reqId) =>
@@ -27,9 +25,15 @@ export const getRequest = async (reqId) =>
 		})
 		.then(({ data }) => data)
 		.catch((err) => {
-			console.error(err);
+			console.log('err:', err);
 			return null;
 		});
 
-export const postRequests = async (reqs) => {};
+export const postRequests = async (reqs) => {
+	const promises = reqs.map((req) => postRequest(req));
+	const responses = await Promise.all(promises);
+
+	return responses;
+};
+
 export const getRequests = async (reqs) => {};
