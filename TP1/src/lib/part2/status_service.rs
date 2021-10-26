@@ -1,13 +1,13 @@
-use crate::{
-    common::utils::now,
-    part2::{
-        dispatcher::WebServiceType, errors::StatusServiceError, logger::Logger,
-        metrics::MetricsCollector, request::Request,
-    },
-};
+use std::collections::HashMap;
+
 use actix::{Actor, Addr, Context, Handler, Message};
 use serde::Serialize;
-use std::collections::HashMap;
+
+use crate::common::utils::now;
+use crate::part2::{
+    dispatcher::WebServiceType, errors::StatusServiceError, logger::Logger,
+    metrics::MetricsCollector, request::Request,
+};
 
 // TYPES ----------------------------------------------------------------------
 
