@@ -8,7 +8,7 @@ use crate::part1::{request::Request, request_handler::RequestHandler};
 /// this method will parse the file (csv type required) into a Request struct and
 /// call the handler in RequestHandler to process the request.
 
-pub fn from_path(path: &str, req_handler: &mut RequestHandler) -> Result<(), Box<dyn Error>> {
+pub fn from_path(path: String, req_handler: &mut RequestHandler) -> Result<(), Box<dyn Error>> {
     let mut rdr = csv::Reader::from_path(path)?;
     for result in rdr.deserialize() {
         let req: Request = result?;

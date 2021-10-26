@@ -5,9 +5,6 @@
 //! * Top n routes
 //! * Number of requests
 
-use crate::common::config::MetricsCollectorConfig;
-use crate::part1::request::{Request, RequestDuration};
-
 use std::{
     collections::HashMap,
     error::Error,
@@ -16,6 +13,9 @@ use std::{
     thread::{self, spawn, JoinHandle},
     time,
 };
+
+use crate::common::{config::MetricsCollectorConfig, utils};
+use crate::part1::request::{Request, RequestDuration};
 
 struct Metrics {
     routes_booking_count: HashMap<(String, String), u64>,
@@ -139,14 +139,23 @@ impl MetricsCollector {
         }
         most_booked_routes_msg += &format!("\n{:=^36}", "");
 
-        println!("Requests successfully processed: {} reqs", n_reqs);
+        println!(
+            "[{}] Requests successfully processed: {} reqs",
+            utils::now_h_m_s(),
+            n_reqs
+        );
 
         if n_reqs > 0 {
             println!(
-                "Mean time to book: {} ms",
+                "[{}] Mean time to book: {} ms",
+                utils::now_h_m_s(),
                 metrics.reqs_duration_cumsum / (n_reqs as i64)
             );
-            println!("Most booked routes:\n{}", most_booked_routes_msg);
+            println!(
+                "[{}] Most booked routes:\n{}",
+                utils::now_h_m_s(),
+                most_booked_routes_msg
+            );
         };
     }
 
