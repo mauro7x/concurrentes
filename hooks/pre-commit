@@ -4,15 +4,42 @@
 CHECK_CHAR='\xE2\x9C\x93'
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+GREY='\033[1;30m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 # Special chars
 CHECK="${GREEN}${CHECK_CHAR}${NC}"
 
+
 # -----------------------------------------------------------------------------
+# WORDIR
+
 cd $1
+# -----------------------------------------------------------------------------
+# WELCOME
 
 echo ""
+echo "======================================"
+echo -e "= ${CHECK} CONTEXT SWITCH PRE-COMMIT HOOK ${CHECK} ="
+echo "======================================"
+echo ""
+
+# -----------------------------------------------------------------------------
+# CHECK IF CHANGES
+
+echo -n "Checking if there are changes in $1... "
+if [[ `git status --porcelain .` ]]; then
+	echo -e "${YELLOW} changes detected.${NC}"
+else
+  echo -e "${GREY}no changes detected. Bye bye!${NC}"
+  echo ""; exit 0
+fi
+
+echo ""
+
+# -----------------------------------------------------------------------------
+# inner checks
 
 echo -n "> Running cargo fmt... "
 if result=$(cargo fmt 2>&1); then
@@ -37,16 +64,6 @@ else
   echo -e "${RED}failed. See output:${NC}"; printf "\n"
   echo -n "${result}"; echo ""; exit 1
 fi
-
-# We should enable this if we write unit tests:
-
-# echo -n "> Running tests... "
-# if result=$(cargo test --color always 2>&1); then
-# 	echo -e "${CHECK}"
-# else
-#   echo -e "${RED}failed. See output:${NC}"; printf "\n"
-#   echo -n "${result}"; echo ""; exit 1
-# fi
 
 echo ""
 exit 0
