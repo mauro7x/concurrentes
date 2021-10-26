@@ -31,9 +31,9 @@ struct StatusResponse {
 
 #[derive(Serialize)]
 struct GetMetricsResponse {
-    routes_booking_count: Vec<serde_json::Value>,
-    req_mean_time: i64,
-    n_reqs: u64,
+    top_routes: Vec<serde_json::Value>,
+    mean_time_ms: i64,
+    number_requests: u64,
 }
 
 // GET INDEX ------------------------------------------------------------------
@@ -50,7 +50,7 @@ pub async fn get_metrics(state: web::Data<ServerState>) -> impl Responder {
     let msg = GetMetrics {};
     match state.metrics_collector.send(msg).await {
         Ok(Ok(res)) => {
-            let routes_booking_count = res
+            let top_routes = res
                 .most_visited_routes
                 .iter()
                 .map(|val| {
@@ -63,9 +63,9 @@ pub async fn get_metrics(state: web::Data<ServerState>) -> impl Responder {
                 .collect();
 
             HttpResponse::Ok().json(GetMetricsResponse {
-                routes_booking_count,
-                n_reqs: res.n_req,
-                req_mean_time: res.req_mean_time,
+                top_routes,
+                number_requests: res.n_req,
+                mean_time_ms: res.req_mean_time,
             })
         }
         Ok(Err(_)) => {

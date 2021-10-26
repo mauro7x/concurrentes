@@ -1,7 +1,10 @@
 use std::collections::VecDeque;
 use std::time::Duration;
 
-use actix::{Actor, ActorFutureExt, Addr, AsyncContext, Context, Handler, Message, ResponseActFuture, WrapFuture, clock::sleep};
+use actix::{
+    clock::sleep, Actor, ActorFutureExt, Addr, AsyncContext, Context, Handler, Message,
+    ResponseActFuture, WrapFuture,
+};
 
 use crate::part2::{
     logger::Logger,
