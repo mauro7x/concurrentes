@@ -2,7 +2,7 @@
 
 use std::{
     error::Error,
-    fs::{File, OpenOptions},
+    fs::{self, File, OpenOptions},
     io::Write,
     sync::mpsc::{channel, Receiver, Sender},
     thread::{spawn, JoinHandle},
@@ -30,8 +30,9 @@ pub struct LoggerSender {
 impl Logger {
     /// Given a LoggerConfig this method will create a Logger entity, open the associated file and spawn a thread.
 
-    pub fn from_config(config: LoggerConfig) -> Result<Logger, Box<dyn Error>> {
-        let path = format!("{}/part1-{}.txt", config.dirpath, utils::now_rfc());
+    pub fn from_config(LoggerConfig { dirpath }: LoggerConfig) -> Result<Logger, Box<dyn Error>> {
+        fs::create_dir_all(&dirpath)?;
+        let path = format!("{}/part1-{}.txt", dirpath, utils::now_rfc());
         let file = OpenOptions::new()
             .create(true)
             .append(true)

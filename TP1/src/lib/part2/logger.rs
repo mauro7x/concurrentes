@@ -1,7 +1,7 @@
 //! System logging module.
 
 use std::{
-    fs::{File, OpenOptions},
+    fs::{self, File, OpenOptions},
     io::Write,
 };
 
@@ -21,8 +21,9 @@ pub struct Logger {
 impl Logger {
     /// Given a LoggerConfig this method will create a Logger entity, openning the associated file.
 
-    pub fn new(config: LoggerConfig) -> Self {
-        let path = format!("{}/part2-{}.txt", config.dirpath, utils::now_rfc());
+    pub fn new(LoggerConfig { dirpath }: LoggerConfig) -> Self {
+        fs::create_dir_all(&dirpath).expect("[CRITICAL] Error while creating logs directory");
+        let path = format!("{}/part2-{}.txt", &dirpath, utils::now_rfc());
         let file = OpenOptions::new()
             .create(true)
             .append(true)
