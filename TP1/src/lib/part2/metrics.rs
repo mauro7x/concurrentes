@@ -2,13 +2,31 @@ use std::collections::HashMap;
 
 use actix::{Actor, Addr, Context, Handler, Message};
 use actix_web::Result;
+use serde::Serialize;
 
 use crate::common::config::MetricsCollectorConfig;
 use crate::part2::logger::Logger;
 
+// TYPES ----------------------------------------------------------------------
+
+#[derive(Serialize, Clone, PartialEq, Eq, Hash)]
+pub struct Route {
+    origin: String,
+    destiny: String,
+}
+
+#[derive(Serialize)]
+pub struct RouteMetrics {
+    route: Route,
+    amount: u64,
+}
+
+pub type MostBookedRoutes = Vec<RouteMetrics>;
+
 // ACTOR ----------------------------------------------------------------------
+
 struct Metrics {
-    routes_booking_count: HashMap<(String, String), u64>,
+    routes_booking_count: HashMap<Route, u64>,
     reqs_duration_cumsum: i64,
     n_reqs: u64,
 }
@@ -31,6 +49,7 @@ impl MetricsCollector {
             logger_addr,
         }
     }
+
     pub fn collect(
         metrics_collector: &Addr<MetricsCollector>,
         start_time: i64,
@@ -50,17 +69,21 @@ impl MetricsCollector {
             println!("Warning: failed to send metrics to MetricsMessage");
         };
     }
-    fn get_n_most_booked_routes(
-        routes_booking_count: &HashMap<(String, String), u64>,
-        n: usize,
-    ) -> Vec<((std::string::String, std::string::String), u64)> {
+
+    fn get_n_most_booked_routes(&self) -> MostBookedRoutes {
+        let routes_booking_count = &self.metrics.routes_booking_count;
+        let n = self.config.n_most_booked;
+
         let mut routes_booking_count_vec: Vec<_> = routes_booking_count.iter().collect();
         routes_booking_count_vec.sort_by(|a, b| b.1.cmp(a.1));
         routes_booking_count_vec.truncate(n);
 
         routes_booking_count_vec
             .into_iter()
-            .map(|(route, req)| (route.clone(), *req))
+            .map(|(route, amount)| RouteMetrics {
+                route: route.clone(),
+                amount: *amount,
+            })
             .collect()
     }
 }
@@ -85,12 +108,12 @@ pub struct MetricsMessage {
     destiny: String,
 }
 
-#[derive(Message)]
+#[derive(Message, Serialize)]
 #[rtype(result = "()")]
 pub struct MetricsResponse {
     pub n_req: u64,
     pub req_mean_time: i64,
-    pub most_visited_routes: Vec<((std::string::String, std::string::String), u64)>,
+    pub most_booked_routes: MostBookedRoutes,
 }
 
 #[derive(Message)]
@@ -102,10 +125,19 @@ pub struct GetMetrics;
 impl Handler<MetricsMessage> for MetricsCollector {
     type Result = ();
 
-    fn handle(&mut self, msg: MetricsMessage, _ctx: &mut Context<Self>) {
-        let time = msg.end_time - msg.start_time;
+    fn handle(
+        &mut self,
+        MetricsMessage {
+            start_time,
+            end_time,
+            origin,
+            destiny,
+        }: MetricsMessage,
+        _ctx: &mut Context<Self>,
+    ) {
+        let time = end_time - start_time;
 
-        let route_key = (msg.origin, msg.destiny);
+        let route_key = Route { origin, destiny };
 
         self.metrics.n_reqs += 1;
         self.metrics.reqs_duration_cumsum += time;
@@ -128,7 +160,7 @@ impl Handler<GetMetrics> for MetricsCollector {
     ) -> Result<MetricsResponse, ()> {
         Logger::send_to(
             &self.logger_addr,
-            "[MetricsCollector] Metrics request".to_string(),
+            "[MetricsCollector] Metrics request received".to_string(),
         );
         let mut req_mean_time = 0;
 
@@ -136,14 +168,11 @@ impl Handler<GetMetrics> for MetricsCollector {
             req_mean_time = self.metrics.reqs_duration_cumsum / (self.metrics.n_reqs as i64);
         }
 
-        let most_visited_routes = MetricsCollector::get_n_most_booked_routes(
-            &self.metrics.routes_booking_count,
-            self.config.n_most_booked,
-        );
+        let most_booked_routes = self.get_n_most_booked_routes();
 
         Ok(MetricsResponse {
             req_mean_time,
-            most_visited_routes,
+            most_booked_routes,
             n_req: self.metrics.n_reqs,
         })
     }

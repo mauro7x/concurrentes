@@ -1,7 +1,6 @@
 use actix::{Actor, Addr, Context, Handler, Message};
 
-use crate::common::utils::now;
-use crate::common::{paths, utils};
+use crate::common::{paths, utils, utils::now};
 use crate::part2::{
     airlines::{self, Airline, Airlines},
     dispatcher::HandleBook,

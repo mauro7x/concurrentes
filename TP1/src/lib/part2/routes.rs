@@ -1,7 +1,5 @@
 use actix_web::{get, post, web, HttpResponse, Responder};
-
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::part2::{
     errors::*,
@@ -29,13 +27,6 @@ struct StatusResponse {
     status: String,
 }
 
-#[derive(Serialize)]
-struct GetMetricsResponse {
-    top_routes: Vec<serde_json::Value>,
-    mean_time_ms: i64,
-    number_requests: u64,
-}
-
 // GET INDEX ------------------------------------------------------------------
 
 #[get("/")]
@@ -49,25 +40,7 @@ pub async fn get_index() -> impl Responder {
 pub async fn get_metrics(state: web::Data<ServerState>) -> impl Responder {
     let msg = GetMetrics {};
     match state.metrics_collector.send(msg).await {
-        Ok(Ok(res)) => {
-            let top_routes = res
-                .most_visited_routes
-                .iter()
-                .map(|val| {
-                    json!({
-                        "from": val.0.0.clone(),
-                        "to": val.0.1.clone(),
-                        "amount": val.1.to_string()
-                    })
-                })
-                .collect();
-
-            HttpResponse::Ok().json(GetMetricsResponse {
-                top_routes,
-                number_requests: res.n_req,
-                mean_time_ms: res.req_mean_time,
-            })
-        }
+        Ok(Ok(metrics_response)) => HttpResponse::Ok().json(metrics_response),
         Ok(Err(_)) => {
             HttpResponse::InternalServerError().body("Metrics Collector error".to_string())
         }
