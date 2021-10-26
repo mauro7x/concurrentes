@@ -74,7 +74,8 @@ impl MetricsCollector {
         let routes_booking_count = &self.metrics.routes_booking_count;
         let n = self.config.n_most_booked;
 
-        let mut routes_booking_count_vec: Vec<_> = routes_booking_count.iter().collect();
+        let mut routes_booking_count_vec: Vec<(&Route, &u64)> =
+            routes_booking_count.iter().collect();
         routes_booking_count_vec.sort_by(|a, b| b.1.cmp(a.1));
         routes_booking_count_vec.truncate(n);
 
