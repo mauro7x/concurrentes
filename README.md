@@ -1,5 +1,7 @@
 # [Técnicas de Programación Concurrente](https://mauro7x.github.io/concurrentes/)
 
+[![TP1 CD](https://github.com/mauro7x/concurrentes/actions/workflows/tp1_cd.yml/badge.svg)](https://github.com/mauro7x/concurrentes/actions/workflows/tp1_cd.yml)
+
 Trabajos prácticos de la materia [**Técnicas de Programación Concurrente I**](https://concurrentes-fiuba.github.io) en el Segundo Cuatrimestre del año 2021, dictada en la Facultad de Ingeniería, Universidad de Buenos Aires.
 
 [¡Accede a nuestra página web!](https://mauro7x.github.io/concurrentes/)
