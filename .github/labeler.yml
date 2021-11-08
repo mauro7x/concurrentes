@@ -6,6 +6,7 @@ hooks: hooks/**/*
 # Packages
 ui: ui/**/*
 tp1: TP1/**/*
+tp2: TP2/**/*
 
 # Extensions
 .rust: '**/*.rs'
