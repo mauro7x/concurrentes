@@ -41,14 +41,6 @@ echo ""
 # -----------------------------------------------------------------------------
 # inner checks
 
-# echo -n "> Running cargo fmt... "
-# if result=$(cargo fmt 2>&1); then
-# 	echo -e "${CHECK}"
-# else
-#   echo -e "${RED}failed. See output:${NC}"; printf "\n"
-#   echo -n "${result}"; echo ""; exit 1
-# fi
-
 echo -n "> Running cargo check... "
 if result=$(cargo check --color always 2>&1); then
 	echo -e "${CHECK}"
