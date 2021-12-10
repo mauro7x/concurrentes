@@ -28,10 +28,14 @@ fn optional_sleep() -> Result<(), Box<dyn Error>> {
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("Hello from AlGlobo");
-    let Config { port } = Config::new()?;
+    let Config {
+        port: _,
+        directory_addr,
+    } = Config::new()?;
+
+    sleep(Duration::from_secs(1));
 
     // Register
-    let directory_addr = format!("localhost:{}", port);
     let mut directory = TcpStream::connect(directory_addr)?;
 
     directory.write(&[b'R'])?;

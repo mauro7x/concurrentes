@@ -7,7 +7,7 @@ services:
     volumes:
       - ./directory/target:/usr/app/target
     environment:
-      - PORT=${PORT}
+      - PORT=${DIRECTORY_PORT}
       - MAX_NODES=${MAX_NODES}
 
   alglobo:
@@ -16,4 +16,7 @@ services:
     volumes:
       - ./alglobo/target:/usr/app/target
     environment:
-      - PORT=${PORT}
+      - PORT=${ALGLOBO_PORT}
+      - SLEEP=3
+      - DIRECTORY_HOST=directory
+      - DIRECTORY_PORT=${DIRECTORY_PORT}

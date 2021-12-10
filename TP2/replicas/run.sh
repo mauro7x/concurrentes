@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REPLICAS="${1:-1}"
+REPLICAS="${1:-0}"
 
 # build
 sh -c 'cd alglobo && cargo build --release' &&

@@ -64,7 +64,10 @@ impl Directory {
         while !self.finished {
             let result = self.listener.accept();
             match result {
-                Ok(connection) => self.connection_handler(connection)?,
+                Ok(connection) => {
+                    self.connection_handler(connection)?;
+                    self.print_connections();
+                }
                 Err(err) => match err.kind() {
                     ErrorKind::WouldBlock => sleep(POLLING_SLEEP_TIME),
                     _ => panic!("[ERROR] {}", err),
@@ -78,12 +81,10 @@ impl Directory {
     }
 
     fn get_next_id(&mut self) -> Id {
-        while !self.used_ids.insert(self.next_id) {
-            self.next_id = next(self.next_id);
+        let mut id = self.next_id;
+        while self.used_ids.contains(&id) {
+            id = next(id);
         }
-
-        let id = self.next_id;
-        self.next_id = next(id);
 
         id
     }
@@ -141,7 +142,6 @@ impl Directory {
             return Ok(());
         }
 
-        let old_id = self.next_id;
         let id = self.get_next_id();
         let mut node = Node { id, ip, stream };
         if let Err(err) = self.broadcast_current_to(&mut node) {
@@ -149,10 +149,12 @@ impl Directory {
                 "[WARN] Error while broadcasting current state to {}: {} (ignoring)",
                 ip, err
             );
-            self.next_id = old_id;
             return Ok(());
         };
         self.broadcast_new(node)?;
+
+        self.used_ids.insert(id);
+        self.next_id = next(id);
         println!("[INFO] {} joined the network with id: {}", ip, id);
 
         Ok(())
@@ -176,7 +178,8 @@ impl Directory {
         let mut dead_nodes = vec![];
 
         let msg = msg_from(NEW, &new_node)?;
-        for mut node in self.nodes.pop() {
+
+        while let Some(mut node) = self.nodes.pop() {
             if node.ip == new_node.ip {
                 self.used_ids.remove(&node.id);
                 continue;
@@ -184,12 +187,14 @@ impl Directory {
 
             match node.stream.write(&msg) {
                 Ok(_) => nodes.push(node),
+
                 Err(_) => {
                     self.used_ids.remove(&node.id);
                     dead_nodes.push(node);
                 }
             };
         }
+
         nodes.push(new_node);
         self.nodes = nodes;
 
@@ -201,7 +206,7 @@ impl Directory {
     }
 
     fn broadcast_dead(&mut self, dead_nodes: Vec<Node>) -> Result<(), Box<dyn Error>> {
-        println!("[INFO] Removing dead nodes: {:#?}", dead_nodes);
+        println!("[DEBUG] Removing detected dead nodes: {:#?}", dead_nodes);
         let mut nodes = vec![];
         let mut more_dead_nodes = vec![];
 
@@ -235,6 +240,17 @@ impl Directory {
         };
 
         Ok(())
+    }
+
+    fn print_connections(&self) {
+        if self.nodes.len() == 0 {
+            return;
+        }
+
+        println!("[INFO] Active nodes:");
+        for Node { id, ip, stream: _ } in &self.nodes {
+            println!("* ID: {} - ADDR: {}", id, ip);
+        }
     }
 }
 
