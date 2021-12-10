@@ -126,6 +126,12 @@ impl Directory {
         println!("[INFO] {} asked to be registered!", ip);
 
         if self.used_ids.len() == self.max_nodes.into() {
+            println!(
+                "[INFO] {} connection rejected since max_nodes being used",
+                ip
+            );
+            // TODO: check if there is any dead_node
+
             if let Err(err) = stream.write(&[REJECTED]) {
                 println!(
                     "[WARN] Error while responding REJECTED to {}: {} (ignoring)",
@@ -172,6 +178,7 @@ impl Directory {
         let msg = msg_from(NEW, &new_node)?;
         for mut node in self.nodes.pop() {
             if node.ip == new_node.ip {
+                self.used_ids.remove(&node.id);
                 continue;
             };
 

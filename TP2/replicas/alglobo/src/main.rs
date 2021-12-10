@@ -1,57 +1,44 @@
 use std::{
     error::Error,
-    io::{Read, Write},
+    io::Write,
     net::{Shutdown, TcpStream},
+    thread::sleep,
     time::Duration,
 };
 
 use lib::config::Config;
 
-const TIMEOUT: Duration = Duration::from_secs(5);
+// ----------------------------------------------------------------------------
+
+fn optional_sleep() -> Result<(), Box<dyn Error>> {
+    let sleep_time = std::env::var("SLEEP");
+    match sleep_time {
+        Ok(time) => {
+            println!("[OPTIONAL SLEEP] Sleeping for {} secs", time);
+            sleep(Duration::from_secs(time.parse()?));
+            println!("[OPTIONAL SLEEP] Awaken");
+        }
+        Err(_) => {
+            println!("[OPTIONAL SLEEP] No sleep");
+        }
+    }
+
+    Ok(())
+}
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("Hello from AlGlobo");
     let Config { port } = Config::new()?;
 
-    // Create socket
-    // let addr = format!("0.0.0.0:{}", port);
-    // let socket = UdpSocket::bind(addr).expect("Error while binding to addr");
-    // let mut buf: [u8; 2] = [0, 0];
-
     // Register
-    let directory = format!("localhost:{}", port);
-    let mut dir_socket = TcpStream::connect(directory)?;
+    let directory_addr = format!("localhost:{}", port);
+    let mut directory = TcpStream::connect(directory_addr)?;
 
-    let sleep_time = std::env::var("SLEEP");
-    match sleep_time {
-        Ok(time) => {
-            println!("Sleeping for {} secs", time);
-            std::thread::sleep(std::time::Duration::from_secs(time.parse()?));
-            println!("Awaken. Leaving, bye bye!");
-        }
-        Err(_) => {
-            println!("No sleep. Leaving, bye bye!");
-        }
-    }
+    directory.write(&[b'R'])?;
 
-    dir_socket.write(&[b'R'])?;
+    optional_sleep()?;
 
-    let mut buf = vec![];
-    while dir_socket.read(&mut buf)? > 0 {
-        match std::str::from_utf8(&buf) {
-            Ok(val) => println!("Received: {}", val),
-            Err(err) => println!("Err: {}", err),
-        }
-    }
-
-    // let mut buf: [u8; 1] = [0];
-    // if let Err(err) = dir_socket.read(&mut buf) {
-    //     println!("Error while reading from socket: {:?}", err);
-    // } else {
-    //     println!("Read: {:?}", buf);
-    // }
-
-    if let Err(err) = dir_socket.shutdown(Shutdown::Both) {
+    if let Err(err) = directory.shutdown(Shutdown::Both) {
         println!("Error while shutting down: {:?}", err)
     };
 
