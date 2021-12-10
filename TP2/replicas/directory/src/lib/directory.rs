@@ -123,15 +123,23 @@ impl Directory {
         Ok(())
     }
 
+    fn detect_dead_nodes(&mut self) -> bool {
+        // TODO
+        false
+    }
+
+    fn full(&self) -> bool {
+        self.used_ids.len() == self.max_nodes.into()
+    }
+
     fn register(&mut self, ip: IpAddr, mut stream: TcpStream) -> Result<(), Box<dyn Error>> {
         println!("[INFO] {} asked to be registered!", ip);
 
-        if self.used_ids.len() == self.max_nodes.into() {
+        if self.full() && !self.detect_dead_nodes() {
             println!(
                 "[INFO] {} connection rejected since max_nodes being used",
                 ip
             );
-            // TODO: check if there is any dead_node
 
             if let Err(err) = stream.write(&[REJECTED]) {
                 println!(
