@@ -34,7 +34,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    dir_socket.write(&[b'F'])?;
+    dir_socket.write(&[b'R'])?;
+
+    let mut buf = vec![];
+    while dir_socket.read(&mut buf)? > 0 {
+        match std::str::from_utf8(&buf) {
+            Ok(val) => println!("Received: {}", val),
+            Err(err) => println!("Err: {}", err),
+        }
+    }
 
     // let mut buf: [u8; 1] = [0];
     // if let Err(err) = dir_socket.read(&mut buf) {

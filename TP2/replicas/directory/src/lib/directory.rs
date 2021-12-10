@@ -56,6 +56,11 @@ impl Directory {
     }
 
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
+        println!(
+            "[INFO] Accepting connections on port {}...",
+            self.listener.local_addr()?.port()
+        );
+
         while !self.finished {
             let result = self.listener.accept();
             match result {
@@ -66,6 +71,8 @@ impl Directory {
                 },
             }
         }
+
+        println!("[INFO] Terminated gracefully. Bye bye!");
 
         Ok(())
     }
