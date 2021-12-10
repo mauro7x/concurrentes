@@ -1,11 +1,19 @@
 version: '3.1'
 
 services:
+  directory:
+    build: ./directory
+    image: tp2_directory
+    volumes:
+      - ./directory/target:/usr/app/target
+    environment:
+      - PORT=${PORT}
+      - MAX_NODES=${MAX_NODES}
+
   alglobo:
     build: ./alglobo
     image: tp2_alglobo_replica
     volumes:
-      - /usr/app/target
-    env_file:
-      - alglobo.env
-    scale: 1
+      - ./alglobo/target:/usr/app/target
+    environment:
+      - PORT=${PORT}
