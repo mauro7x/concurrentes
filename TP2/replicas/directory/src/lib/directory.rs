@@ -12,8 +12,8 @@ use crate::{
     config::Config,
     node::Node,
     protocol::{
-        encode, msg_from, RecvMessage, ACCEPTED, DEAD, EMPTY_MESSAGE, EOB, FINISHED, NEW, REGISTER,
-        REJECTED,
+        encode, msg_from, RecvMessage, ACCEPTED, DEAD, EMPTY_MESSAGE, EOB, FINISHED, NEW, PING,
+        REGISTER, REJECTED,
     },
     types::*,
     utils::next,
@@ -80,15 +80,6 @@ impl Directory {
         Ok(())
     }
 
-    fn get_next_id(&mut self) -> Id {
-        let mut id = self.next_id;
-        while self.used_ids.contains(&id) {
-            id = next(id);
-        }
-
-        id
-    }
-
     fn connection_handler(
         &mut self,
         connection: (TcpStream, SocketAddr),
@@ -123,19 +114,10 @@ impl Directory {
         Ok(())
     }
 
-    fn detect_dead_nodes(&mut self) -> bool {
-        // TODO
-        false
-    }
-
-    fn full(&self) -> bool {
-        self.used_ids.len() == self.max_nodes.into()
-    }
-
     fn register(&mut self, ip: IpAddr, mut stream: TcpStream) -> Result<(), Box<dyn Error>> {
         println!("[INFO] {} asked to be registered!", ip);
 
-        if self.full() && !self.detect_dead_nodes() {
+        if self.full() && !self.remove_dead_nodes()? {
             println!(
                 "[INFO] {} connection rejected since max_nodes being used",
                 ip
@@ -224,7 +206,7 @@ impl Directory {
             msgs.push(msg);
         }
 
-        for mut node in self.nodes.pop() {
+        while let Some(mut node) = self.nodes.pop() {
             let mut error = false;
             for msg in &msgs {
                 if let Err(_) = node.stream.write(msg) {
@@ -248,6 +230,44 @@ impl Directory {
         };
 
         Ok(())
+    }
+
+    // helpers
+
+    fn get_next_id(&mut self) -> Id {
+        let mut id = self.next_id;
+        while self.used_ids.contains(&id) {
+            id = next(id);
+        }
+
+        id
+    }
+
+    fn remove_dead_nodes(&mut self) -> Result<bool, Box<dyn Error>> {
+        let mut nodes = vec![];
+        let mut dead_nodes = vec![];
+
+        while let Some(mut node) = self.nodes.pop() {
+            match node.stream.write(&[PING]) {
+                Ok(_) => nodes.push(node),
+                Err(_) => {
+                    self.used_ids.remove(&node.id);
+                    dead_nodes.push(node);
+                }
+            };
+        }
+        self.nodes = nodes;
+
+        let found_dead_nodes = dead_nodes.len() > 0;
+        if found_dead_nodes {
+            self.broadcast_dead(dead_nodes)?;
+        };
+
+        Ok(found_dead_nodes)
+    }
+
+    fn full(&self) -> bool {
+        self.used_ids.len() == self.max_nodes.into()
     }
 
     fn print_connections(&self) {
