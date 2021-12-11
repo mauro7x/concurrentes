@@ -21,7 +21,6 @@ pub const DEAD: u8 = b'D';
 pub fn encode(node: &Node) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut msg = vec![];
     msg.extend_from_slice(&node.id.to_le_bytes());
-    msg.extend_from_slice(&[b'=']);
 
     let encoded_ip = match node.ip {
         IpAddr::V4(ip) => Ok(ip.octets().to_vec()),

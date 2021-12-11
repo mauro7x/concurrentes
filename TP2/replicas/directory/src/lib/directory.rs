@@ -153,11 +153,18 @@ impl Directory {
     fn broadcast_current_to(&self, node: &mut Node) -> Result<(), Box<dyn Error>> {
         let mut stream = &node.stream;
 
+        // 1. Send accepted (1)
         stream.write(&[ACCEPTED])?;
-        for node in &self.nodes {
-            let encoded_node = encode(node)?;
-            stream.write(&encoded_node)?;
+
+        // 2. Send ID and addr (1 + 4 = 5)
+        stream.write(&encode(node)?)?;
+
+        // 3. Send rest of the nodes ((1 + 4 = 5) * N)
+        for peer in &self.nodes {
+            stream.write(&encode(peer)?)?;
         }
+
+        // 4. Send EOB (1)
         stream.write(&[EOB])?;
 
         Ok(())
