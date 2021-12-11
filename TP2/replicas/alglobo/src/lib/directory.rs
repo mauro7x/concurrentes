@@ -1,7 +1,6 @@
 use std::{
     collections::HashMap,
-    fmt,
-    io::{Read, Write},
+    io::{ErrorKind, Read, Write},
     mem::size_of,
     net::{Ipv4Addr, SocketAddr, TcpStream},
     thread::sleep,
@@ -9,7 +8,7 @@ use std::{
 
 use crate::{
     constants::{DIRECTORY_CONNECTION_MAX_ATTEMPTS, DIRECTORY_CONNECTION_RETRY_TIME},
-    types::{BoxResult, Id, Node},
+    types::{BoxResult, Id, Id2Ip, Ip2Id, Node},
 };
 
 // ----------------------------------------------------------------------------
@@ -23,6 +22,8 @@ type RecvOpcode = [u8; 1];
 const ACCEPTED: RecvOpcode = [b'A'];
 const REJECTED: RecvOpcode = [b'R'];
 const EOB: RecvOpcode = [b'E'];
+pub const NEW: RecvOpcode = [b'N'];
+pub const DEAD: RecvOpcode = [b'D'];
 
 // ----------------------------------------------------------------------------
 
@@ -30,20 +31,22 @@ pub struct Directory {
     id: Id,
     addr: SocketAddr,
     stream: TcpStream,
-    nodes: HashMap<Id, Ipv4Addr>,
+    id2ip: Id2Ip,
+    ip2id: Ip2Id,
 }
 
 impl Directory {
     pub fn new(addr: SocketAddr) -> BoxResult<Self> {
         let mut stream = Directory::connect_with_attemps(addr, DIRECTORY_CONNECTION_MAX_ATTEMPTS)?;
-        let (id, nodes) = Directory::register(&mut stream)?;
+        let (id, id2ip, ip2id) = Directory::register(&mut stream)?;
         stream.set_nonblocking(true)?;
 
         let ret = Directory {
             id,
             addr,
             stream,
-            nodes,
+            id2ip,
+            ip2id,
         };
         Ok(ret)
     }
@@ -59,8 +62,26 @@ impl Directory {
         self.id
     }
 
+    pub fn update(&mut self) -> BoxResult<()> {
+        let mut opcode: RecvOpcode = [0; 1];
+
+        match self.stream.read(&mut opcode) {
+            Ok(_) => {
+                let id = Directory::recv_id(&mut self.stream)?;
+                let ip = Directory::recv_ip(&mut self.stream)?;
+                self.inner_update(opcode, id, ip)?;
+
+                self.update()
+            }
+            Err(err) => match err.kind() {
+                ErrorKind::WouldBlock => Ok(()),
+                _ => Err(err)?,
+            },
+        }
+    }
+
     pub fn print(&self) {
-        if self.nodes.len() == 0 {
+        if self.id2ip.len() == 0 {
             return println!("{:=^27}\n={:^25}=\n{:=^27}", "", "Empty directory", "");
         };
 
@@ -68,10 +89,36 @@ impl Directory {
             "{:=^27}\n={:^6}|{:^18}=\n={:-^25}=",
             "", "ID", "ADDRESS", ""
         );
-        for node in &self.nodes {
+        for node in &self.id2ip {
             print!("\n={:^6}|{:^18}=", node.0, node.1);
         }
         println!("\n{:=^27}", "")
+    }
+
+    // Private
+
+    fn inner_update(&mut self, opcode: RecvOpcode, id: Id, ip: Ipv4Addr) -> BoxResult<()> {
+        match opcode {
+            NEW => {
+                if let Some(old_id) = self.ip2id.insert(ip, id) {
+                    self.id2ip.remove(&old_id);
+                };
+                if let Some(old_ip) = self.id2ip.insert(id, ip) {
+                    println!("[WARN] This block should never be reached, since the Directory should not allow for IDs collisions");
+                    self.ip2id.remove(&old_ip);
+                }
+            }
+            DEAD => {
+                self.id2ip.remove(&id);
+                self.ip2id.remove(&ip);
+            }
+            _ => {
+                println!("[ERROR] Received unexpected opcode from Directory, aborting");
+                Err("Unexpected opcode from Directory")?;
+            }
+        };
+
+        Ok(())
     }
 
     // Abstract
@@ -95,7 +142,7 @@ impl Directory {
         }
     }
 
-    fn register(stream: &mut TcpStream) -> BoxResult<(Id, HashMap<Id, Ipv4Addr>)> {
+    fn register(stream: &mut TcpStream) -> BoxResult<(Id, Id2Ip, Ip2Id)> {
         // Start registration process by sending OPCODE
         stream.write(&REGISTER)?;
 
@@ -104,10 +151,10 @@ impl Directory {
         let id = Directory::recv_id(stream)?;
         let nodes = Directory::recv_nodes(stream)?;
 
-        // Parse nodes
-        let parsed_nodes = Directory::parse_nodes(nodes);
+        // Parse nodes to HashMaps
+        let (id2ip, ip2id) = Directory::parse_nodes(nodes);
 
-        Ok((id, parsed_nodes))
+        Ok((id, id2ip, ip2id))
     }
 
     fn recv_accepted(stream: &mut TcpStream) -> BoxResult<()> {
@@ -136,19 +183,22 @@ impl Directory {
         Ok(id_buf[0])
     }
 
+    fn recv_ip(stream: &mut TcpStream) -> BoxResult<Ipv4Addr> {
+        let mut ip_buf: [u8; size_of::<Ipv4Addr>()] = [0; size_of::<Ipv4Addr>()];
+        stream.read(&mut ip_buf)?;
+
+        Ok(Ipv4Addr::from(ip_buf))
+    }
+
     fn recv_nodes(stream: &mut TcpStream) -> BoxResult<Vec<Node>> {
         let mut nodes = vec![];
 
         let mut id_buf: [u8; 1] = [0; 1];
-        let mut addr_buf: [u8; 4] = [0; 4];
 
         stream.read(&mut id_buf)?;
         while id_buf != EOB {
-            stream.read(&mut addr_buf)?;
-            let node = Node {
-                id: id_buf[0],
-                addr: Ipv4Addr::from(addr_buf),
-            };
+            let ip = Directory::recv_ip(stream)?;
+            let node = Node { id: id_buf[0], ip };
             nodes.push(node);
 
             stream.read(&mut id_buf)?;
@@ -157,33 +207,15 @@ impl Directory {
         Ok(nodes)
     }
 
-    fn parse_nodes(mut nodes: Vec<Node>) -> HashMap<Id, Ipv4Addr> {
-        let mut parsed_nodes = HashMap::new();
+    fn parse_nodes(mut nodes: Vec<Node>) -> (Id2Ip, Ip2Id) {
+        let mut id2ip = HashMap::new();
+        let mut ip2id = HashMap::new();
 
         while let Some(node) = nodes.pop() {
-            parsed_nodes.insert(node.id, node.addr);
+            id2ip.insert(node.id, node.ip);
+            ip2id.insert(node.ip, node.id);
         }
 
-        parsed_nodes
-    }
-}
-
-impl fmt::Debug for Directory {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.nodes.len() == 0 {
-            return write!(f, "{:=^19}\n={:^17}=\n{:=^19}", "", "Empty directory", "");
-        };
-
-        write!(
-            f,
-            "{:=^19}\n={:^6}={:^10}=\n{:=^19}",
-            "", "ID", "ADDRESS", ""
-        )?;
-
-        for node in &self.nodes {
-            write!(f, "\n={:^4}={:^9}=", node.0, node.1)?;
-        }
-
-        write!(f, "\n{:=^16}", "")
+        (id2ip, ip2id)
     }
 }

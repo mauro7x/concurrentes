@@ -68,7 +68,7 @@ impl Directory {
             }
         }
 
-        println!("[INFO] Terminated gracefully. Bye bye!");
+        println!("[INFO] Terminated gracefully");
 
         Ok(())
     }
@@ -78,9 +78,7 @@ impl Directory {
         connection: (TcpStream, SocketAddr),
     ) -> Result<(), Box<dyn Error>> {
         let (mut stream, addr) = connection;
-
         let ip = addr.ip();
-        println!("[INFO] New connection from {}", ip);
 
         let mut buf: RecvMessage = EMPTY_MESSAGE;
         if let Err(err) = stream.read(&mut buf) {
@@ -108,7 +106,7 @@ impl Directory {
     }
 
     fn register(&mut self, ip: IpAddr, mut stream: TcpStream) -> Result<(), Box<dyn Error>> {
-        println!("[INFO] {} asked to be registered!", ip);
+        println!("[INFO] Register request from {}", ip);
 
         if self.full() && !self.remove_dead_nodes()? {
             println!(

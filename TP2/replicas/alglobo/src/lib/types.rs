@@ -1,4 +1,4 @@
-use std::{error::Error, net::Ipv4Addr};
+use std::{collections::HashMap, error::Error, net::Ipv4Addr};
 
 // ----------------------------------------------------------------------------
 
@@ -8,5 +8,8 @@ pub type Id = u8;
 
 pub struct Node {
     pub id: Id,
-    pub addr: Ipv4Addr,
+    pub ip: Ipv4Addr,
 }
+
+pub type Ip2Id = HashMap<Ipv4Addr, Id>;
+pub type Id2Ip = HashMap<Id, Ipv4Addr>;

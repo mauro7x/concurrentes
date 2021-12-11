@@ -37,21 +37,30 @@ impl Replica {
         Ok(ret)
     }
 
-    pub fn run(&self) -> BoxResult<()> {
-        println!("[INFO] Replica started");
-
-        // TODO: Work
+    pub fn run(&mut self) -> BoxResult<()> {
+        println!("[INFO] (ID: {}) Replica started", self.id);
         self.directory.print();
 
-        // TEMP: Remove when work added
-        sleep(Duration::from_secs(5));
+        // TODO: Work
+        {
+            // TEMPORARY JUST FOR DEBUGGING
+            println!("[DEBUG] Sleeping to simulate work...");
+            sleep(Duration::from_secs(5));
+            println!("[DEBUG] Awaken!");
+
+            self.directory.update()?;
+            self.directory.print();
+        }
 
         // When there is no more work to do...
         if let Err(err) = self.directory.finish() {
-            println!("[WARN] Error while finishing Directory: {}", err);
+            println!(
+                "[WARN] (ID: {}) Error while finishing Directory: {}",
+                self.id, err
+            );
         };
 
-        println!("[INFO] Terminated gracefully");
+        println!("[INFO] (ID: {}) Terminated gracefully", self.id);
         Ok(())
     }
 }

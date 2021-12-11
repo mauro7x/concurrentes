@@ -4,7 +4,7 @@ use std::thread::sleep;
 // ----------------------------------------------------------------------------
 
 fn run() -> BoxResult<()> {
-    let replica = Replica::new()?;
+    let mut replica = Replica::new()?;
     replica.run()?;
 
     Ok(())
