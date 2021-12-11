@@ -1,6 +1,5 @@
 use std::{
     collections::HashSet,
-    error::Error,
     io::{ErrorKind, Read, Write},
     net::{IpAddr, SocketAddr, TcpListener, TcpStream},
     thread::sleep,
@@ -31,7 +30,7 @@ pub struct Directory {
 }
 
 impl Directory {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> BoxResult<Self> {
         let Config { port, max_nodes } = Config::new()?;
 
         let nodes = Vec::with_capacity(max_nodes.into());
@@ -51,13 +50,13 @@ impl Directory {
         Ok(ret)
     }
 
-    pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn run(&mut self) -> BoxResult<()> {
         println!(
             "[INFO] Accepting connections on port {}...",
             self.listener.local_addr()?.port()
         );
 
-        while !self.finished {
+        while self.keep_running() {
             let result = self.listener.accept();
             match result {
                 Ok(connection) => self.connection_handler(connection)?,
@@ -73,10 +72,7 @@ impl Directory {
         Ok(())
     }
 
-    fn connection_handler(
-        &mut self,
-        connection: (TcpStream, SocketAddr),
-    ) -> Result<(), Box<dyn Error>> {
+    fn connection_handler(&mut self, connection: (TcpStream, SocketAddr)) -> BoxResult<()> {
         let (mut stream, addr) = connection;
         let ip = addr.ip();
 
@@ -91,7 +87,10 @@ impl Directory {
 
         match buf {
             REGISTER => self.register(ip, stream)?,
-            FINISHED => self.finished = true,
+            FINISHED => {
+                self.finished = true;
+                self.remove();
+            }
 
             // Unknown
             _ => {
@@ -105,7 +104,7 @@ impl Directory {
         Ok(())
     }
 
-    fn register(&mut self, ip: IpAddr, mut stream: TcpStream) -> Result<(), Box<dyn Error>> {
+    fn register(&mut self, ip: IpAddr, mut stream: TcpStream) -> BoxResult<()> {
         println!("[INFO] Register request from {}", ip);
 
         if self.full() && !self.remove_dead_nodes()? {
@@ -142,27 +141,27 @@ impl Directory {
         Ok(())
     }
 
-    fn broadcast_current_to(&self, node: &mut Node) -> Result<(), Box<dyn Error>> {
+    fn broadcast_current_to(&self, node: &mut Node) -> BoxResult<()> {
         let mut stream = &node.stream;
 
         // 1. Send accepted (1)
-        stream.write(&[ACCEPTED])?;
+        stream.write_all(&[ACCEPTED])?;
 
         // 2. Send ID
-        stream.write(&[node.id])?;
+        stream.write_all(&[node.id])?;
 
         // 3. Send rest of the nodes ((1 + 4 = 5) * N)
         for peer in &self.nodes {
-            stream.write(&encode(peer)?)?;
+            stream.write_all(&encode(peer)?)?;
         }
 
         // 4. Send EOB (1)
-        stream.write(&[EOB])?;
+        stream.write_all(&[EOB])?;
 
         Ok(())
     }
 
-    fn broadcast_new(&mut self, new_node: Node) -> Result<(), Box<dyn Error>> {
+    fn broadcast_new(&mut self, new_node: Node) -> BoxResult<()> {
         let mut nodes = vec![];
         let mut dead_nodes = vec![];
 
@@ -187,14 +186,14 @@ impl Directory {
         nodes.push(new_node);
         self.nodes = nodes;
 
-        if dead_nodes.len() > 0 {
+        if !dead_nodes.is_empty() {
             self.broadcast_dead(dead_nodes)?;
         };
 
         Ok(())
     }
 
-    fn broadcast_dead(&mut self, dead_nodes: Vec<Node>) -> Result<(), Box<dyn Error>> {
+    fn broadcast_dead(&mut self, dead_nodes: Vec<Node>) -> BoxResult<()> {
         println!("[DEBUG] Removing detected dead nodes: {:#?}", dead_nodes);
         let mut nodes = vec![];
         let mut more_dead_nodes = vec![];
@@ -208,10 +207,10 @@ impl Directory {
         while let Some(mut node) = self.nodes.pop() {
             let mut error = false;
             for msg in &msgs {
-                if let Err(_) = node.stream.write(msg) {
+                if node.stream.write(msg).is_err() {
                     error = true;
                     break;
-                };
+                }
             }
 
             match error {
@@ -224,14 +223,20 @@ impl Directory {
         }
         self.nodes = nodes;
 
-        if more_dead_nodes.len() > 0 {
+        if !more_dead_nodes.is_empty() {
             self.broadcast_dead(more_dead_nodes)?;
         };
 
         Ok(())
     }
 
-    // helpers
+    fn remove(&self) {}
+
+    // Helpers
+
+    fn keep_running(&self) -> bool {
+        !self.finished || !self.nodes.is_empty()
+    }
 
     fn get_next_id(&mut self) -> Id {
         let mut id = self.next_id;
@@ -242,7 +247,7 @@ impl Directory {
         id
     }
 
-    fn remove_dead_nodes(&mut self) -> Result<bool, Box<dyn Error>> {
+    fn remove_dead_nodes(&mut self) -> BoxResult<bool> {
         let mut nodes = vec![];
         let mut dead_nodes = vec![];
 
@@ -257,7 +262,7 @@ impl Directory {
         }
         self.nodes = nodes;
 
-        let found_dead_nodes = dead_nodes.len() > 0;
+        let found_dead_nodes = !dead_nodes.is_empty();
         if found_dead_nodes {
             self.broadcast_dead(dead_nodes)?;
         };
@@ -270,7 +275,7 @@ impl Directory {
     }
 
     fn print(&self) {
-        if self.nodes.len() == 0 {
+        if self.nodes.is_empty() {
             return println!("{:=^27}\n={:^25}=\n{:=^27}", "", "Empty directory", "");
         };
 

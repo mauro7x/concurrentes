@@ -1,6 +1,6 @@
-use std::{error::Error, net::IpAddr};
+use std::net::IpAddr;
 
-use crate::node::Node;
+use crate::{node::Node, types::BoxResult};
 
 // Receive messages
 pub type RecvMessage = [u8; 1];
@@ -18,7 +18,8 @@ pub const NEW: u8 = b'N';
 pub const DEAD: u8 = b'D';
 
 // Helpers
-pub fn encode(node: &Node) -> Result<Vec<u8>, Box<dyn Error>> {
+
+pub fn encode(node: &Node) -> BoxResult<Vec<u8>> {
     let mut msg = vec![];
     msg.extend_from_slice(&node.id.to_le_bytes());
 
@@ -31,7 +32,7 @@ pub fn encode(node: &Node) -> Result<Vec<u8>, Box<dyn Error>> {
     Ok(msg)
 }
 
-pub fn msg_from(header: u8, node: &Node) -> Result<Vec<u8>, Box<dyn Error>> {
+pub fn msg_from(header: u8, node: &Node) -> BoxResult<Vec<u8>> {
     let mut msg = vec![header];
     let mut encoded_node = encode(node)?;
     msg.append(&mut encoded_node);

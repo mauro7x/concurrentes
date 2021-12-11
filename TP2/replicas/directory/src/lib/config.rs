@@ -1,5 +1,5 @@
 use crate::types::*;
-use std::{env, error::Error};
+use std::env;
 
 pub struct Config {
     pub port: u32,
@@ -7,7 +7,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> BoxResult<Self> {
         let port = env::var("PORT")?.parse()?;
 
         let max_nodes = env::var("MAX_NODES")?.parse()?;

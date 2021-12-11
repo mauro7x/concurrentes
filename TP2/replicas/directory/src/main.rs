@@ -1,10 +1,10 @@
-use std::{error::Error, process::exit};
+use std::process::exit;
 
-use lib::{constants::ERROR_CODE, directory::Directory};
+use lib::{constants::ERROR_CODE, directory::Directory, types::BoxResult};
 
 // ----------------------------------------------------------------------------
 
-fn run() -> Result<(), Box<dyn Error>> {
+fn run() -> BoxResult<()> {
     let mut directory = Directory::new()?;
     directory.run()?;
 
