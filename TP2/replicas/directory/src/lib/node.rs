@@ -1,6 +1,6 @@
 use std::{
     fmt::Debug,
-    net::{IpAddr, TcpStream},
+    net::{Ipv4Addr, TcpStream},
 };
 
 use crate::types::*;
@@ -8,6 +8,6 @@ use crate::types::*;
 #[derive(Debug)]
 pub struct Node {
     pub id: Id,
-    pub ip: IpAddr,
+    pub ip: Ipv4Addr,
     pub stream: TcpStream,
 }

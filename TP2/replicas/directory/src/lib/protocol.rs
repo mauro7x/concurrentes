@@ -1,5 +1,3 @@
-use std::net::IpAddr;
-
 use crate::{node::Node, types::BoxResult};
 
 // ----------------------------------------------------------------------------
@@ -21,12 +19,7 @@ pub const FINISHED: RecvOpcode = [b'F'];
 pub fn encode(node: &Node) -> BoxResult<Vec<u8>> {
     let mut msg = vec![];
     msg.extend_from_slice(&node.id.to_le_bytes());
-
-    let encoded_ip = match node.ip {
-        IpAddr::V4(ip) => Ok(ip.octets().to_vec()),
-        _ => Err("Not valid IPv4"),
-    }?;
-    msg.extend_from_slice(&encoded_ip);
+    msg.extend_from_slice(&node.ip.octets().to_vec());
 
     Ok(msg)
 }

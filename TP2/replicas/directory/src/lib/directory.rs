@@ -1,7 +1,7 @@
 use std::{
     collections::HashSet,
     io::{ErrorKind, Read, Write},
-    net::{IpAddr, SocketAddr, TcpListener, TcpStream},
+    net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream},
     thread::sleep,
     vec,
 };
@@ -71,9 +71,11 @@ impl Directory {
         Ok(())
     }
 
+    // Private
+
     fn connection_handler(&mut self, connection: (TcpStream, SocketAddr)) -> BoxResult<()> {
         let (mut stream, addr) = connection;
-        let ip = addr.ip();
+        let ip = Directory::addr2ipv4(addr)?;
 
         let mut buf: RecvOpcode = [0; 1];
         if let Err(err) = stream.read_exact(&mut buf) {
@@ -85,11 +87,8 @@ impl Directory {
         }
 
         match buf {
-            REGISTER => self.register(ip, stream)?,
-            FINISHED => {
-                self.finished = true;
-                self.remove();
-            }
+            REGISTER => self.register_handler(ip, stream)?,
+            FINISHED => self.finished_handler(ip),
 
             // Unknown
             _ => {
@@ -103,7 +102,7 @@ impl Directory {
         Ok(())
     }
 
-    fn register(&mut self, ip: IpAddr, mut stream: TcpStream) -> BoxResult<()> {
+    fn register_handler(&mut self, ip: Ipv4Addr, mut stream: TcpStream) -> BoxResult<()> {
         println!("[INFO] Register request from {}", ip);
 
         if self.full() && !self.remove_dead_nodes()? {
@@ -134,27 +133,68 @@ impl Directory {
 
         self.used_ids.insert(id);
         self.next_id = next(id);
+
         println!("[INFO] {} joined the network with id: {}", ip, id);
         self.print();
 
         Ok(())
     }
 
+    fn finished_handler(&mut self, ip: Ipv4Addr) {
+        println!("[INFO] Finished request from {}", ip);
+        self.finished = true;
+
+        match self.remove(ip) {
+            Ok(id) => {
+                println!("[INFO] {} (ID: {}) leaved the network", ip, id);
+                self.print();
+            }
+            Err(err) => println!("[WARN] Error while removing finished node: {}", err),
+        };
+    }
+
+    fn remove(&mut self, ip: Ipv4Addr) -> BoxResult<Id> {
+        let mut nodes = vec![];
+        let mut dead_nodes = vec![];
+
+        while let Some(node) = self.nodes.pop() {
+            if node.ip == ip {
+                self.used_ids.remove(&node.id);
+                dead_nodes.push(node);
+                continue;
+            };
+
+            nodes.push(node);
+        }
+
+        self.nodes = nodes;
+
+        let id = dead_nodes
+            .first()
+            .ok_or("Node not present in Directory")?
+            .id;
+        self.broadcast_dead(dead_nodes)?;
+
+        Ok(id)
+    }
+
+    // Broadcast
+
     fn broadcast_current_to(&self, node: &mut Node) -> BoxResult<()> {
         let mut stream = &node.stream;
 
-        // 1. Send accepted (1)
+        // 1. Send accepted
         stream.write_all(&ACCEPTED)?;
 
         // 2. Send ID
         stream.write_all(&[node.id])?;
 
-        // 3. Send rest of the nodes ((1 + 4 = 5) * N)
+        // 3. Send rest of the nodes
         for peer in &self.nodes {
             stream.write_all(&encode(peer)?)?;
         }
 
-        // 4. Send EOB (1)
+        // 4. Send EOB
         stream.write_all(&EOB)?;
 
         Ok(())
@@ -228,12 +268,14 @@ impl Directory {
         Ok(())
     }
 
-    fn remove(&self) {}
-
     // Helpers
 
     fn keep_running(&self) -> bool {
         !self.finished || !self.nodes.is_empty()
+    }
+
+    fn full(&self) -> bool {
+        self.used_ids.len() == self.max_nodes.into()
     }
 
     fn get_next_id(&mut self) -> Id {
@@ -268,10 +310,6 @@ impl Directory {
         Ok(found_dead_nodes)
     }
 
-    fn full(&self) -> bool {
-        self.used_ids.len() == self.max_nodes.into()
-    }
-
     fn print(&self) {
         if self.nodes.is_empty() {
             return println!("{:=^27}\n={:^25}=\n{:=^27}", "", "Empty directory", "");
@@ -285,5 +323,14 @@ impl Directory {
             print!("\n={:^6}|{:^18}=", node.id, node.ip);
         }
         println!("\n{:=^27}", "")
+    }
+
+    // Abstract
+
+    fn addr2ipv4(addr: SocketAddr) -> BoxResult<Ipv4Addr> {
+        match addr {
+            SocketAddr::V4(addr) => Ok(*addr.ip()),
+            SocketAddr::V6(_) => Err("Invalid IpV6 received".into()),
+        }
     }
 }
