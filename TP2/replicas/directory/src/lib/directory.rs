@@ -77,7 +77,7 @@ impl Directory {
         let ip = addr.ip();
 
         let mut buf: RecvMessage = EMPTY_MESSAGE;
-        if let Err(err) = stream.read(&mut buf) {
+        if let Err(err) = stream.read_exact(&mut buf) {
             println!(
                 "[WARN] Error ({}) while reading from {}, aborting connection",
                 err, ip
@@ -113,7 +113,7 @@ impl Directory {
                 ip
             );
 
-            if let Err(err) = stream.write(&[REJECTED]) {
+            if let Err(err) = stream.write_all(&[REJECTED]) {
                 println!(
                     "[WARN] Error while responding REJECTED to {}: {} (ignoring)",
                     ip, err
@@ -173,7 +173,7 @@ impl Directory {
                 continue;
             };
 
-            match node.stream.write(&msg) {
+            match node.stream.write_all(&msg) {
                 Ok(_) => nodes.push(node),
 
                 Err(_) => {
@@ -207,7 +207,7 @@ impl Directory {
         while let Some(mut node) = self.nodes.pop() {
             let mut error = false;
             for msg in &msgs {
-                if node.stream.write(msg).is_err() {
+                if node.stream.write_all(msg).is_err() {
                     error = true;
                     break;
                 }
@@ -252,7 +252,7 @@ impl Directory {
         let mut dead_nodes = vec![];
 
         while let Some(mut node) = self.nodes.pop() {
-            match node.stream.write(&[PING]) {
+            match node.stream.write_all(&[PING]) {
                 Ok(_) => nodes.push(node),
                 Err(_) => {
                     self.used_ids.remove(&node.id);
