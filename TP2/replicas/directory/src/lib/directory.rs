@@ -175,7 +175,6 @@ impl Directory {
 
             match node.stream.write_all(&msg) {
                 Ok(_) => nodes.push(node),
-
                 Err(_) => {
                     self.used_ids.remove(&node.id);
                     dead_nodes.push(node);
