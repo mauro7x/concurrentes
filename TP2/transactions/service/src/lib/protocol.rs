@@ -1,5 +1,5 @@
-use std::{net::{UdpSocket}, convert::TryInto};
-use std::io::Result;
+use std::{net::UdpSocket, convert::TryInto};
+use crate::types::{Action, Entity, Message, Tx};
 
 // Message structure
 //
@@ -14,32 +14,10 @@ const BANK_REP: u8 = b'B';
 const ALGLOBO_REP: u8 = b'C';
 const HOTEL_REP: u8 = b'D';
 
-#[derive(Debug)]
-pub enum Entity {
-    Airline,
-    AlGlobo,
-    Bank,
-    Hotel
-}
-
 // ACTIONS
 const COMMIT_REP: u8 = b'E';
 const PREPARE_REP: u8 = b'F';
 const ABORT_REP: u8 = b'G';
-
-#[derive(Debug)]
-pub enum Action {
-    Prepare,
-    Commit,
-    Abort
-}
-
-#[derive(Debug)]
-pub struct Message {
-    pub from: Entity,
-    pub action: Action,
-    pub tx: u32
-}
 
 fn pack_message(msg: &Message, buf: &mut Vec<u8>) {
     let from_rep = match &msg.from {
@@ -90,15 +68,12 @@ fn unpack_message(buf: &Vec<u8>) -> Message {
 pub fn send_msg_to(socket: &mut UdpSocket, msg: &Message, dest: &String) -> std::io::Result<usize> {
     let mut buf: Vec<u8> = Vec::new();
     pack_message(msg, &mut buf);
-    println!("Sending {:#?} to {:#?}", msg, dest);
     socket.send_to(&buf, dest)
 }
 
-pub fn recv_msg(socket: &mut UdpSocket) -> std::io::Result<Message> {
+pub fn recv_msg(socket: &mut UdpSocket) -> std::io::Result<(String, Message)> {
     let mut buf= vec!(0; 6);
-    // TODO: analyse whether it is convenient to use src to reply
     let (_, src) = socket.recv_from(&mut buf)?;
     let msg = unpack_message(&buf);
-    println!("Received {:#?} from {:#?}", msg, msg.from);
-    Ok(msg)
+    Ok((src.to_string(), msg))
 }

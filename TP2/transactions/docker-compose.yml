@@ -8,6 +8,12 @@ services:
       - /usr/app/target
     env_file:
       - alglobo.env
+    stdin_open: true # docker run -i // to retry queries in stdin input
+    tty: true        # docker run -t
+    depends_on:
+      - airline
+      - bank
+      - hotel
 
   airline:
     build: ./service
@@ -32,3 +38,4 @@ services:
       - /usr/app/target
     env_file:
       - hotel.env
+
