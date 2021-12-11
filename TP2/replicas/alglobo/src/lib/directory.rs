@@ -37,6 +37,7 @@ impl Directory {
     pub fn new(addr: SocketAddr) -> BoxResult<Self> {
         let mut stream = Directory::connect_with_attemps(addr, DIRECTORY_CONNECTION_MAX_ATTEMPTS)?;
         let (id, nodes) = Directory::register(&mut stream)?;
+        stream.set_nonblocking(true)?;
 
         let ret = Directory {
             id,
@@ -56,6 +57,21 @@ impl Directory {
 
     pub fn get_my_id(&self) -> Id {
         self.id
+    }
+
+    pub fn print(&self) {
+        if self.nodes.len() == 0 {
+            return println!("{:=^27}\n={:^25}=\n{:=^27}", "", "Empty directory", "");
+        };
+
+        print!(
+            "{:=^27}\n={:^6}|{:^18}=\n={:-^25}=",
+            "", "ID", "ADDRESS", ""
+        );
+        for node in &self.nodes {
+            print!("\n={:^6}|{:^18}=", node.0, node.1);
+        }
+        println!("\n{:=^27}", "")
     }
 
     // Abstract

@@ -1,4 +1,4 @@
-use std::net::UdpSocket;
+use std::{net::UdpSocket, thread::sleep, time::Duration};
 
 use crate::{
     config::Config,
@@ -41,7 +41,10 @@ impl Replica {
         println!("[INFO] Replica started");
 
         // TODO: Work
-        println!("{:?}", self.directory);
+        self.directory.print();
+
+        // TEMP: Remove when work added
+        sleep(Duration::from_secs(5));
 
         // When there is no more work to do...
         if let Err(err) = self.directory.finish() {

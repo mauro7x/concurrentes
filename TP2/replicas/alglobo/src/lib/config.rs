@@ -28,12 +28,16 @@ impl Config {
         let directory_port: u16 = env::var("DIRECTORY_PORT")?.parse()?;
         let directory_dns_query = format!("{}:{}", directory_host, directory_port);
 
+        println!("=== AQUI 1: {:#?}", directory_dns_query);
+
         let directory_addr = directory_dns_query
             .to_socket_addrs()?
             .collect::<Vec<SocketAddr>>()
             .first()
             .ok_or("No IP address found for directory hostname")?
             .to_owned();
+
+        println!("=== AQUI 2: {:#?}", directory_addr);
 
         Ok(directory_addr)
     }
