@@ -53,7 +53,7 @@ impl Directory {
 
     pub fn finish(&self) -> BoxResult<()> {
         let mut stream = TcpStream::connect(self.addr)?;
-        stream.write(&FINISHED)?;
+        stream.write_all(&FINISHED)?;
 
         Ok(())
     }
@@ -65,7 +65,7 @@ impl Directory {
     pub fn update(&mut self) -> BoxResult<()> {
         let mut opcode: RecvOpcode = [0; 1];
 
-        match self.stream.read(&mut opcode) {
+        match self.stream.read_exact(&mut opcode) {
             Ok(_) => {
                 let id = Directory::recv_id(&mut self.stream)?;
                 let ip = Directory::recv_ip(&mut self.stream)?;
@@ -75,13 +75,13 @@ impl Directory {
             }
             Err(err) => match err.kind() {
                 ErrorKind::WouldBlock => Ok(()),
-                _ => Err(err)?,
+                _ => Err(err.into()),
             },
         }
     }
 
     pub fn print(&self) {
-        if self.id2ip.len() == 0 {
+        if self.id2ip.is_empty() {
             return println!("{:=^27}\n={:^25}=\n{:=^27}", "", "Empty directory", "");
         };
 
@@ -114,7 +114,7 @@ impl Directory {
             }
             _ => {
                 println!("[ERROR] Received unexpected opcode from Directory, aborting");
-                Err("Unexpected opcode from Directory")?;
+                return Err("Unexpected opcode from Directory".into());
             }
         };
 
@@ -132,7 +132,7 @@ impl Directory {
                 Err(err) => {
                     if attempts == max_attemps {
                         println!("[ERROR] Max directory connection attemps, aborting");
-                        Err(err)?;
+                        return Err(err.into());
                     };
 
                     attempts += 1;
@@ -144,7 +144,7 @@ impl Directory {
 
     fn register(stream: &mut TcpStream) -> BoxResult<(Id, Id2Ip, Ip2Id)> {
         // Start registration process by sending OPCODE
-        stream.write(&REGISTER)?;
+        stream.write_all(&REGISTER)?;
 
         // Receive fields according to protocol
         Directory::recv_accepted(stream)?;
@@ -159,17 +159,17 @@ impl Directory {
 
     fn recv_accepted(stream: &mut TcpStream) -> BoxResult<()> {
         let mut buf: [u8; 1] = [0; 1];
-        stream.read(&mut buf)?;
+        stream.read_exact(&mut buf)?;
 
         match buf {
             ACCEPTED => {}
             REJECTED => {
                 println!("[WARN] Register rejected because directory is full, aborting");
-                Err("Rejected: Directory full")?;
+                return Err("Rejected: Directory full".into());
             }
             [_] => {
                 println!("[ERROR] Received unknown message from Directory, aborting");
-                Err("Unknown message from Directory")?;
+                return Err("Unknown message from Directory".into());
             }
         }
 
@@ -178,14 +178,14 @@ impl Directory {
 
     fn recv_id(stream: &mut TcpStream) -> BoxResult<Id> {
         let mut id_buf: [u8; size_of::<Id>()] = [0; size_of::<Id>()];
-        stream.read(&mut id_buf)?;
+        stream.read_exact(&mut id_buf)?;
 
         Ok(id_buf[0])
     }
 
     fn recv_ip(stream: &mut TcpStream) -> BoxResult<Ipv4Addr> {
         let mut ip_buf: [u8; size_of::<Ipv4Addr>()] = [0; size_of::<Ipv4Addr>()];
-        stream.read(&mut ip_buf)?;
+        stream.read_exact(&mut ip_buf)?;
 
         Ok(Ipv4Addr::from(ip_buf))
     }
@@ -195,13 +195,13 @@ impl Directory {
 
         let mut id_buf: [u8; 1] = [0; 1];
 
-        stream.read(&mut id_buf)?;
+        stream.read_exact(&mut id_buf)?;
         while id_buf != EOB {
             let ip = Directory::recv_ip(stream)?;
             let node = Node { id: id_buf[0], ip };
             nodes.push(node);
 
-            stream.read(&mut id_buf)?;
+            stream.read_exact(&mut id_buf)?;
         }
 
         Ok(nodes)
