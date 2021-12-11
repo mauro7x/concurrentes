@@ -1,8 +1,11 @@
 use std::{
     env,
-    error::Error,
     net::{SocketAddr, ToSocketAddrs},
 };
+
+use crate::types::BoxResult;
+
+// ----------------------------------------------------------------------------
 
 pub struct Config {
     pub port: u32,
@@ -10,7 +13,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> BoxResult<Self> {
         let port: u32 = env::var("PORT")?.parse()?;
         let directory_addr = Config::get_directory_addr()?;
 
@@ -20,7 +23,7 @@ impl Config {
         })
     }
 
-    fn get_directory_addr() -> Result<SocketAddr, Box<dyn Error>> {
+    fn get_directory_addr() -> BoxResult<SocketAddr> {
         let directory_host = env::var("DIRECTORY_HOST")?;
         let directory_port: u16 = env::var("DIRECTORY_PORT")?.parse()?;
         let directory_dns_query = format!("{}:{}", directory_host, directory_port);
@@ -29,7 +32,7 @@ impl Config {
             .to_socket_addrs()?
             .collect::<Vec<SocketAddr>>()
             .first()
-            .unwrap()
+            .ok_or("No IP address found for directory hostname")?
             .to_owned();
 
         Ok(directory_addr)

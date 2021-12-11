@@ -1,5 +1,8 @@
-use lib::directory::Directory;
 use std::{error::Error, process::exit};
+
+use lib::{constants::ERROR_CODE, directory::Directory};
+
+// ----------------------------------------------------------------------------
 
 fn run() -> Result<(), Box<dyn Error>> {
     let mut directory = Directory::new()?;
@@ -11,6 +14,6 @@ fn run() -> Result<(), Box<dyn Error>> {
 fn main() {
     if let Err(err) = run() {
         println!("[ERROR] {}", err);
-        exit(-1);
+        exit(ERROR_CODE);
     }
 }

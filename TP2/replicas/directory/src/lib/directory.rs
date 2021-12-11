@@ -4,12 +4,12 @@ use std::{
     io::{ErrorKind, Read, Write},
     net::{IpAddr, SocketAddr, TcpListener, TcpStream},
     thread::sleep,
-    time::Duration,
     vec,
 };
 
 use crate::{
     config::Config,
+    constants::POLLING_SLEEP_TIME,
     node::Node,
     protocol::{
         encode, msg_from, RecvMessage, ACCEPTED, DEAD, EMPTY_MESSAGE, EOB, FINISHED, NEW, PING,
@@ -19,11 +19,7 @@ use crate::{
     utils::next,
 };
 
-// Constants --------------------------------------------------------
-
-const POLLING_SLEEP_TIME: Duration = Duration::from_millis(100);
-
-// Implementation -------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 pub struct Directory {
     max_nodes: Id,
@@ -64,10 +60,7 @@ impl Directory {
         while !self.finished {
             let result = self.listener.accept();
             match result {
-                Ok(connection) => {
-                    self.connection_handler(connection)?;
-                    self.print_connections();
-                }
+                Ok(connection) => self.connection_handler(connection)?,
                 Err(err) => match err.kind() {
                     ErrorKind::WouldBlock => sleep(POLLING_SLEEP_TIME),
                     _ => panic!("[ERROR] {}", err),
@@ -146,6 +139,7 @@ impl Directory {
         self.used_ids.insert(id);
         self.next_id = next(id);
         println!("[INFO] {} joined the network with id: {}", ip, id);
+        self.print();
 
         Ok(())
     }
@@ -156,8 +150,8 @@ impl Directory {
         // 1. Send accepted (1)
         stream.write(&[ACCEPTED])?;
 
-        // 2. Send ID and addr (1 + 4 = 5)
-        stream.write(&encode(node)?)?;
+        // 2. Send ID
+        stream.write(&[node.id])?;
 
         // 3. Send rest of the nodes ((1 + 4 = 5) * N)
         for peer in &self.nodes {
@@ -277,16 +271,18 @@ impl Directory {
         self.used_ids.len() == self.max_nodes.into()
     }
 
-    fn print_connections(&self) {
+    fn print(&self) {
         if self.nodes.len() == 0 {
-            return;
-        }
+            return println!("{:=^27}\n={:^25}=\n{:=^27}", "", "Empty directory", "");
+        };
 
-        println!("[INFO] Active nodes:");
-        for Node { id, ip, stream: _ } in &self.nodes {
-            println!("* ID: {} - ADDR: {}", id, ip);
+        print!(
+            "{:=^27}\n={:^6}|{:^18}=\n={:-^25}=",
+            "", "ID", "ADDRESS", ""
+        );
+        for node in &self.nodes {
+            print!("\n={:^6}|{:^18}=", node.id, node.ip);
         }
+        println!("\n{:=^27}", "")
     }
 }
-
-// ----------------------------------------------------------------------------
