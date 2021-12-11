@@ -11,8 +11,7 @@ use crate::{
     constants::POLLING_SLEEP_TIME,
     node::Node,
     protocol::{
-        encode, msg_from, RecvMessage, ACCEPTED, DEAD, EMPTY_MESSAGE, EOB, FINISHED, NEW, PING,
-        REGISTER, REJECTED,
+        encode, msg_from, RecvOpcode, ACCEPTED, DEAD, EOB, FINISHED, NEW, PING, REGISTER, REJECTED,
     },
     types::*,
     utils::next,
@@ -76,7 +75,7 @@ impl Directory {
         let (mut stream, addr) = connection;
         let ip = addr.ip();
 
-        let mut buf: RecvMessage = EMPTY_MESSAGE;
+        let mut buf: RecvOpcode = [0; 1];
         if let Err(err) = stream.read_exact(&mut buf) {
             println!(
                 "[WARN] Error ({}) while reading from {}, aborting connection",
@@ -113,7 +112,7 @@ impl Directory {
                 ip
             );
 
-            if let Err(err) = stream.write_all(&[REJECTED]) {
+            if let Err(err) = stream.write_all(&REJECTED) {
                 println!(
                     "[WARN] Error while responding REJECTED to {}: {} (ignoring)",
                     ip, err
@@ -145,7 +144,7 @@ impl Directory {
         let mut stream = &node.stream;
 
         // 1. Send accepted (1)
-        stream.write_all(&[ACCEPTED])?;
+        stream.write_all(&ACCEPTED)?;
 
         // 2. Send ID
         stream.write_all(&[node.id])?;
@@ -156,7 +155,7 @@ impl Directory {
         }
 
         // 4. Send EOB (1)
-        stream.write_all(&[EOB])?;
+        stream.write_all(&EOB)?;
 
         Ok(())
     }
@@ -251,7 +250,7 @@ impl Directory {
         let mut dead_nodes = vec![];
 
         while let Some(mut node) = self.nodes.pop() {
-            match node.stream.write_all(&[PING]) {
+            match node.stream.write_all(&PING) {
                 Ok(_) => nodes.push(node),
                 Err(_) => {
                     self.used_ids.remove(&node.id);

@@ -2,22 +2,21 @@ use std::net::IpAddr;
 
 use crate::{node::Node, types::BoxResult};
 
-// Receive messages
-pub type RecvMessage = [u8; 1];
-pub const EMPTY_MESSAGE: RecvMessage = [0];
-pub const REGISTER: RecvMessage = [b'R'];
-pub const FINISHED: RecvMessage = [b'F'];
+// ----------------------------------------------------------------------------
 
-// Send messages
-pub const ACCEPTED: u8 = b'A';
-pub const REJECTED: u8 = b'R';
-pub const EOB: u8 = b'E';
-pub const PING: u8 = b'P';
-// --- broadcast msgs
-pub const NEW: u8 = b'N';
-pub const DEAD: u8 = b'D';
+pub type SendOpcode = [u8; 1];
+pub const ACCEPTED: SendOpcode = [b'A'];
+pub const REJECTED: SendOpcode = [b'R'];
+pub const EOB: SendOpcode = [b'E'];
+pub const PING: SendOpcode = [b'P'];
+pub const NEW: SendOpcode = [b'N'];
+pub const DEAD: SendOpcode = [b'D'];
 
-// Helpers
+pub type RecvOpcode = [u8; 1];
+pub const REGISTER: RecvOpcode = [b'R'];
+pub const FINISHED: RecvOpcode = [b'F'];
+
+// ----------------------------------------------------------------------------
 
 pub fn encode(node: &Node) -> BoxResult<Vec<u8>> {
     let mut msg = vec![];
@@ -32,8 +31,8 @@ pub fn encode(node: &Node) -> BoxResult<Vec<u8>> {
     Ok(msg)
 }
 
-pub fn msg_from(header: u8, node: &Node) -> BoxResult<Vec<u8>> {
-    let mut msg = vec![header];
+pub fn msg_from(opcode: SendOpcode, node: &Node) -> BoxResult<Vec<u8>> {
+    let mut msg = Vec::from(opcode);
     let mut encoded_node = encode(node)?;
     msg.append(&mut encoded_node);
 
