@@ -31,14 +31,14 @@ echo -e "${FC}========================================${NC}\n"
 echo "Pre-running tasks:"
 
 printf "${GREY}  > Creating services...${NC}"
-# docker-compose up --build --no-start > /dev/null 2>&1
+docker-compose up --build --no-start > /dev/null 2>&1
 echo -e " ${CHECK}"
 
 printf "${GREY}  > Removing dangling images...${NC}"
-# docker image prune -f > /dev/null 2>&1
+docker image prune -f > /dev/null 2>&1
 echo -e " ${CHECK}"
 
 echo -e "\n${CYANB}Running with ${REPLICAS} replicas...${NC}"
-# docker-compose start --scale alglobo=$REPLICAS
+docker-compose start --scale alglobo=$REPLICAS
 
 echo -e "\n${CYANB}Bye bye!${NC}"
