@@ -1,0 +1,30 @@
+name: 'TP2 CI'
+
+on:
+  push:
+    paths:
+      - TP2/**/*.rs
+  pull_request:
+    branches:
+      - main
+    paths:
+      - TP2/**/*.rs
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./TP2/ci
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run check
+        run: ./run_for_services.sh "cargo check --verbose"
+
+      - name: Run clippy
+        run: ./run_for_services.sh "cargo clippy --verbose -- -D warnings"
