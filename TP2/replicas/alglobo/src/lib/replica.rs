@@ -13,12 +13,12 @@ pub struct Replica {
 
 impl Replica {
     pub fn new() -> BoxResult<Self> {
-        println!("[DEBUG] (Replica) Creating Control...");
+        println!("[DEBUG] (ID: -) (Replica) Creating Control...");
         let control = Control::new()?;
         let id = control.get_my_id()?;
 
         let ret = Replica { id, control };
-        println!("[DEBUG] (Replica) Created successfully");
+        println!("[DEBUG] (ID: {}) (Replica) Created successfully", id);
 
         Ok(ret)
     }

@@ -6,9 +6,12 @@ use std::{
 
 use crate::{
     config::Config,
-    constants::{CV_WAIT_ERROR, ELECTION_TIMEOUT, MUTEX_LOCK_ERROR},
+    constants::{
+        CV_WAIT_ERROR, ELECTION_TIMEOUT, GET_LEADER_TIMEOUT, HEALTHCHECK_RETRIES,
+        HEALTHCHECK_TIMEOUT, MUTEX_LOCK_ERROR, REPLICA_SLEEP_TIME,
+    },
     directory::Directory,
-    protocols::election::{Message, COORDINATOR, ELECTION, NEW_MESSAGE, OK, PING, PONG},
+    protocols::election::{Message, ELECTION, GET_LEADER, LEADER, NEW_MESSAGE, OK, PING},
     types::{BoxResult, Id, Shared},
 };
 
@@ -25,17 +28,20 @@ pub struct Control {
 
 impl Control {
     pub fn new() -> BoxResult<Self> {
-        println!("[DEBUG] (Control) Creating Config...");
+        println!("[DEBUG] (ID: -) (Control) Creating Config...");
         let Config {
             port,
             directory_addr,
         } = Config::new()?;
 
-        println!("[DEBUG] (Control) Creating Directory...");
+        println!("[DEBUG] (ID: -) Creating Directory...");
         let directory = Directory::new(directory_addr)?;
         let id = directory.get_my_id();
 
-        println!("[DEBUG] (Control) Creating and binding socket...");
+        println!(
+            "[DEBUG] (ID: {}) (Control) Creating and binding socket...",
+            id
+        );
         let mut ret = Control {
             port,
             id,
@@ -45,12 +51,11 @@ impl Control {
             got_ok: Arc::new(Shared::new(false)),
         };
 
-        println!("[DEBUG] (Control) Starting Receiver...");
+        ret.init_leader()?;
+
+        println!("[DEBUG] (ID: {}) (Control) Starting Receiver...", id);
         let mut clone = ret.clone()?;
         thread::spawn(move || clone.receiver());
-
-        println!("[DEBUG] (Control) Finding current leader...");
-        ret.init_leader()?;
 
         Ok(ret)
     }
@@ -65,18 +70,26 @@ impl Control {
         Ok(self.id == self.get_leader_id()?)
     }
 
-    pub fn healthcheck_leader(&self) -> BoxResult<()> {
+    pub fn healthcheck_leader(&mut self) -> BoxResult<()> {
+        let healthcheck_socket = UdpSocket::bind("0.0.0.0:0")?;
+        healthcheck_socket.set_read_timeout(Some(HEALTHCHECK_TIMEOUT))?;
+
         while !self.am_i_leader()? {
-            println!("[DEBUG] (Control) Updating my directory...");
-            self.directory()?.update()?;
-            println!("[DEBUG] (Control) Directory updated");
+            println!(
+                "[INFO] (ID: {}) (Control) Sending healthcheck to leader...",
+                self.id
+            );
 
-            println!("<Replica> Sending healthcheck...");
-            // ping?
-            println!("<Replica> Received response!");
-
-            // sleep some time?
-            std::thread::sleep(std::time::Duration::from_secs(3));
+            if self.is_leader_alive(&healthcheck_socket)? {
+                println!("[INFO] (ID: {}) (Control) Leader is alive!", self.id);
+                thread::sleep(REPLICA_SLEEP_TIME);
+            } else {
+                println!(
+                    "[INFO] (ID: {}) (Control) Leader not responding, start election",
+                    self.id
+                );
+                self.find_new_leader()?;
+            }
         }
 
         Ok(())
@@ -86,7 +99,7 @@ impl Control {
         // When there is no more work to do...
         if let Err(err) = self.directory()?.finish() {
             println!(
-                "[WARN] (ID: {}) Error while finishing Directory: {}",
+                "[WARN] (ID: {}) (Control) Error while finishing Directory: {}",
                 self.id, err
             );
         };
@@ -114,14 +127,53 @@ impl Control {
     }
 
     fn init_leader(&mut self) -> BoxResult<()> {
-        // Avoid unnecessary election:
-        // -- if we have a leader in the network, get that ID silently
-        // -- if not, initiate election
+        println!(
+            "[INFO] (ID: {}) (Control) Finding current leader...",
+            self.id
+        );
+        let unshared_socket = UdpSocket::bind("0.0.0.0:0")?;
 
-        // TODO: Ask to every node if there is a Leader
-        // If not:
-        println!("[INFO] (Control) No leader found, starting election");
-        self.leader_election()?;
+        {
+            let msg = self.msg_with_id(GET_LEADER);
+            let mut directory = self.directory()?;
+            let nodes = directory.get_updated_nodes()?;
+            if nodes.is_empty() {
+                // I am the only node in the network,
+                // make myself leader without asking
+                println!(
+                    "[INFO] (ID: {}) (Control) No more nodes found, starting as leader",
+                    self.id
+                );
+                self.set_new_leader(self.id)?;
+                return Ok(());
+            }
+
+            for ip in nodes.values() {
+                unshared_socket.send_to(&msg, self.ip2addr(ip))?;
+            }
+        }
+
+        let mut message: Message = NEW_MESSAGE;
+        unshared_socket.set_read_timeout(Some(GET_LEADER_TIMEOUT))?;
+        if let Ok(_) = unshared_socket.recv_from(&mut message) {
+            let [opcode, id] = message;
+            match opcode {
+                LEADER => {
+                    println!(
+                        "[INFO] (ID: {}) (Control) Found leader with ID: {}",
+                        self.id, id
+                    );
+                    self.set_new_leader(id)?;
+                }
+                _ => return Err("Unknown response to GET_LEADER received".into()),
+            }
+        } else {
+            println!(
+                "[WARN] (ID: {}) (Control) Nobody responded, announcing myself as leader",
+                self.id
+            );
+            self.make_me_leader()?;
+        }
 
         Ok(())
     }
@@ -189,7 +241,7 @@ impl Control {
 
     fn make_me_leader(&mut self) -> BoxResult<()> {
         println!("[INFO] (ID: {}) (Control) Announcing as leader", self.id);
-        let msg = self.msg_with_id(COORDINATOR);
+        let msg = self.msg_with_id(LEADER);
         let mut directory = self.directory()?;
         let nodes = directory.get_updated_nodes()?;
 
@@ -197,14 +249,37 @@ impl Control {
             self.socket.send_to(&msg, self.ip2addr(ip))?;
         }
 
-        self.new_leader(self.id)?;
+        self.set_new_leader(self.id)?;
 
         Ok(())
     }
 
+    fn is_leader_alive(&self, socket: &UdpSocket) -> BoxResult<bool> {
+        let mut attempts = 0;
+        let mut recv_buf = [0; 1];
+
+        loop {
+            match self.get_leader_addr()? {
+                Some(leader_addr) => {
+                    socket.send_to(&[PING], leader_addr)?;
+                    if let Ok(_) = socket.recv_from(&mut recv_buf) {
+                        return Ok(true);
+                    } else {
+                        if attempts == HEALTHCHECK_RETRIES {
+                            return Ok(false);
+                        };
+
+                        attempts += 1;
+                    }
+                }
+                None => return Ok(false),
+            };
+        }
+    }
+
     // Helpers
 
-    fn new_leader(&self, id: Id) -> BoxResult<()> {
+    fn set_new_leader(&self, id: Id) -> BoxResult<()> {
         *self.leader_id.mutex.lock().map_err(|_| MUTEX_LOCK_ERROR)? = Some(id);
         self.leader_id.cv.notify_all();
 
@@ -244,6 +319,16 @@ impl Control {
         Ok(id)
     }
 
+    fn get_leader_addr(&self) -> BoxResult<Option<SocketAddr>> {
+        let leader_id = self.get_leader_id()?;
+        let mut directory = self.directory()?;
+        directory.update()?;
+
+        Ok(directory
+            .get_node_addr(leader_id)?
+            .and_then(|ip| Some(self.ip2addr(ip))))
+    }
+
     fn set_shared_value<V>(&mut self, shared: Arc<Shared<V>>, v: V) -> BoxResult<()> {
         *shared.mutex.lock().map_err(|_| MUTEX_LOCK_ERROR)? = v;
 
@@ -255,7 +340,10 @@ impl Control {
     fn receiver(&mut self) {
         if let Err(err) = self.inner_receiver() {
             // TODO: Avoid this panic, propagate!
-            panic!("[ERROR] (Control:Receiver) Crashed: {}", err)
+            panic!(
+                "[ERROR] (ID: {}) (Control:Receiver) Crashed: {}",
+                self.id, err
+            )
         };
     }
 
@@ -270,7 +358,8 @@ impl Control {
                 [opcode, id] => match opcode {
                     OK => self.handle_ok(from, id)?,
                     ELECTION => self.handle_election(from, id)?,
-                    COORDINATOR => self.handle_coordinator(from, id)?,
+                    LEADER => self.handle_leader(from, id)?,
+                    GET_LEADER => self.handle_get_leader(from, id)?,
                     _ => self.handle_invalid(from, id)?,
                 },
             };
@@ -278,14 +367,20 @@ impl Control {
     }
 
     fn handle_ping(&self, from: SocketAddr) -> BoxResult<()> {
-        println!("[DEBUG] (Control:Receiver) PING from {}", from);
-        self.socket.send_to(&PONG, from)?;
+        println!(
+            "[DEBUG] (ID: {}) (Control:Receiver) PING from {}",
+            self.id, from
+        );
+        self.socket.send_to(&[OK], from)?;
 
         Ok(())
     }
 
     fn handle_ok(&mut self, from: SocketAddr, id: Id) -> BoxResult<()> {
-        println!("[DEBUG] (Control:Receiver) OK from {} (ID: {})", from, id);
+        println!(
+            "[DEBUG] (ID: {}) (Control:Receiver) OK from {} (ID: {})",
+            self.id, from, id
+        );
         self.set_shared_value(self.got_ok.clone(), true)?;
         self.got_ok.cv.notify_all();
 
@@ -294,8 +389,8 @@ impl Control {
 
     fn handle_election(&self, from: SocketAddr, id: Id) -> BoxResult<()> {
         println!(
-            "[DEBUG] (Control:Receiver) ELECTION from {} (ID: {})",
-            from, id
+            "[DEBUG] (ID: {}) (Control:Receiver) ELECTION from {} (ID: {})",
+            self.id, from, id
         );
         if id > self.id {
             self.socket.send_to(&self.msg_with_id(OK), from)?;
@@ -315,20 +410,32 @@ impl Control {
         Ok(())
     }
 
-    fn handle_coordinator(&mut self, from: SocketAddr, id: Id) -> BoxResult<()> {
+    fn handle_leader(&mut self, from: SocketAddr, id: Id) -> BoxResult<()> {
         println!(
-            "[DEBUG] (Control:Receiver) COORDINATOR from {} (ID: {})",
-            from, id
+            "[DEBUG] (ID: {}) (Control:Receiver) LEADER from {} (ID: {})",
+            self.id, from, id
         );
-        self.new_leader(id)?;
+        self.set_new_leader(id)?;
+
+        Ok(())
+    }
+
+    fn handle_get_leader(&mut self, from: SocketAddr, id: Id) -> BoxResult<()> {
+        println!(
+            "[DEBUG] (ID: {}) (Control:Receiver) GET_LEADER from {} (ID: {})",
+            self.id, from, id
+        );
+        if self.am_i_leader()? {
+            self.socket.send_to(&self.msg_with_id(LEADER), from)?;
+        }
 
         Ok(())
     }
 
     fn handle_invalid(&self, from: SocketAddr, id: Id) -> BoxResult<()> {
         println!(
-            "[WARN] (Control:Receiver) Unknown from {} (ID: {}), ignoring",
-            from, id
+            "[WARN] (ID: {}) (Control:Receiver) Unknown from {} (ID: {}), ignoring",
+            self.id, from, id
         );
 
         Ok(())
