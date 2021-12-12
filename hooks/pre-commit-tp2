@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Constants
+CHECK_CHAR='\xE2\x9C\x93'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+GREY='\033[1;30m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+# Special chars
+CHECK="${GREEN}${CHECK_CHAR}${NC}"
+
+
+# -----------------------------------------------------------------------------
+# WORDIR
+
+cd TP2
+
+# -----------------------------------------------------------------------------
+# WELCOME
+
+echo ""
+echo "======================================"
+echo -e "= ${CHECK} CONTEXT SWITCH PRE-COMMIT HOOK ${CHECK} ="
+echo "======================================"
+echo ""
+
+# -----------------------------------------------------------------------------
+# CHECK IF CHANGES
+
+echo -n "Checking if there are changes... "
+if [[ `git status --porcelain .` ]]; then
+	echo -e "${YELLOW} changes detected.${NC}"
+else
+  echo -e "${GREY}no changes detected. Bye bye!${NC}"
+  echo ""; exit 0
+fi
+
+echo ""
+
+# -----------------------------------------------------------------------------
+# navigate to scripts dir
+cd ci
+
+# inner checks
+
+echo -n "> Running cargo check... "
+if result=$(./run_for_services.sh "cargo check --color always" 2>&1); then
+	echo -e "${CHECK}"
+else
+  echo -e "${RED}failed. See output:${NC}"; printf "\n"
+  echo -n "${result}"; echo ""; exit 1
+fi
+
+echo -e -n "> Running cargo clippy ${YELLOW}(WARNINGS ALLOWED)${NC}... "
+if result=$(./run_for_services.sh "cargo clippy --color always" 2>&1); then
+	echo -e "${CHECK}"
+else
+  echo -e "${RED}failed. See output:${NC}"; printf "\n"
+  echo -n "${result}"; echo ""; exit 1
+fi
+
+echo ""
+exit 0
