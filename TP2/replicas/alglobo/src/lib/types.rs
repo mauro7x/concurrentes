@@ -1,4 +1,9 @@
-use std::{collections::HashMap, error::Error, net::Ipv4Addr};
+use std::{
+    collections::HashMap,
+    error::Error,
+    net::Ipv4Addr,
+    sync::{Condvar, Mutex},
+};
 
 // ----------------------------------------------------------------------------
 
@@ -13,3 +18,17 @@ pub struct Node {
 
 pub type Ip2Id = HashMap<Ipv4Addr, Id>;
 pub type Id2Ip = HashMap<Id, Ipv4Addr>;
+
+pub struct Shared<T> {
+    pub mutex: Mutex<T>,
+    pub cv: Condvar,
+}
+
+impl<T> Shared<T> {
+    pub fn new(t: T) -> Self {
+        Self {
+            mutex: Mutex::new(t),
+            cv: Condvar::new(),
+        }
+    }
+}

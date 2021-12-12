@@ -8,22 +8,9 @@ use std::{
 
 use crate::{
     constants::{DIRECTORY_CONNECTION_MAX_ATTEMPTS, DIRECTORY_CONNECTION_RETRY_TIME},
+    protocols::directory::{RecvOpcode, ACCEPTED, DEAD, EOB, FINISHED, NEW, REGISTER, REJECTED},
     types::{BoxResult, Id, Id2Ip, Ip2Id, Node},
 };
-
-// ----------------------------------------------------------------------------
-// Protocol
-
-type SendOpcode = [u8; 1];
-const REGISTER: SendOpcode = [b'R'];
-const FINISHED: SendOpcode = [b'F'];
-
-type RecvOpcode = [u8; 1];
-const ACCEPTED: RecvOpcode = [b'A'];
-const REJECTED: RecvOpcode = [b'R'];
-const EOB: RecvOpcode = [b'E'];
-pub const NEW: RecvOpcode = [b'N'];
-pub const DEAD: RecvOpcode = [b'D'];
 
 // ----------------------------------------------------------------------------
 
@@ -93,6 +80,11 @@ impl Directory {
             print!("\n={:^6}|{:^18}=", node.0, node.1);
         }
         println!("\n{:=^27}", "")
+    }
+
+    pub fn get_updated_nodes(&mut self) -> BoxResult<&Id2Ip> {
+        self.update()?;
+        Ok(&self.id2ip)
     }
 
     // Private
