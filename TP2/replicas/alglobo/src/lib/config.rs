@@ -8,13 +8,13 @@ use crate::types::BoxResult;
 // ----------------------------------------------------------------------------
 
 pub struct Config {
-    pub port: u32,
+    pub port: u16,
     pub directory_addr: SocketAddr,
 }
 
 impl Config {
     pub fn new() -> BoxResult<Self> {
-        let port: u32 = env::var("PORT")?.parse()?;
+        let port: u16 = env::var("PORT")?.parse()?;
         let directory_addr = Config::get_directory_addr()?;
 
         Ok(Config {
