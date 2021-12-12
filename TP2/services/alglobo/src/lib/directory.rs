@@ -7,8 +7,8 @@ use std::{
 };
 
 use crate::{
-    constants::{DIRECTORY_CONNECTION_MAX_ATTEMPTS, DIRECTORY_CONNECTION_RETRY_TIME},
-    protocols::directory::{RecvOpcode, ACCEPTED, DEAD, EOB, FINISHED, NEW, REGISTER, REJECTED},
+    constant::directory::{CONNECTION_MAX_ATTEMPTS, CONNECTION_RETRY_TIME},
+    protocol::directory::{RecvOpcode, ACCEPTED, DEAD, EOB, FINISHED, NEW, REGISTER, REJECTED},
     types::{BoxResult, Id, Id2Ip, Ip2Id, Node},
 };
 
@@ -24,7 +24,7 @@ pub struct Directory {
 
 impl Directory {
     pub fn new(addr: SocketAddr) -> BoxResult<Self> {
-        let mut stream = Directory::connect_with_attemps(addr, DIRECTORY_CONNECTION_MAX_ATTEMPTS)?;
+        let mut stream = Directory::connect_with_attemps(addr, CONNECTION_MAX_ATTEMPTS)?;
         let (id, id2ip, ip2id) = Directory::register(&mut stream)?;
         stream.set_nonblocking(true)?;
 
@@ -121,7 +121,7 @@ impl Directory {
                     };
 
                     attempts += 1;
-                    sleep(DIRECTORY_CONNECTION_RETRY_TIME);
+                    sleep(CONNECTION_RETRY_TIME);
                 }
             }
         }

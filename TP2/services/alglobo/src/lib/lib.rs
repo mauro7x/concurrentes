@@ -1,11 +1,11 @@
 // Public
-pub mod constants;
+pub mod constant;
 pub mod replica;
 pub mod types;
 
 // Private
 mod config;
-mod control;
+mod control_plane;
+mod data_plane;
 mod directory;
-mod leader;
-mod protocols;
+mod protocol;

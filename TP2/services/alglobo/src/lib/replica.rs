@@ -1,6 +1,6 @@
 use crate::{
-    control::Control,
-    leader::Leader,
+    control_plane::Control,
+    data_plane::DataPlane,
     types::{BoxResult, Id},
 };
 
@@ -51,9 +51,9 @@ impl Replica {
     }
 
     fn run_as_leader(&self) -> BoxResult<()> {
-        let leader = Leader::new()?;
+        let data_plane = DataPlane::new()?;
         while self.control.am_i_leader()? {
-            leader.run_iteration()?;
+            data_plane.run_iteration()?;
         }
 
         // TODO: differentiate if we leave because

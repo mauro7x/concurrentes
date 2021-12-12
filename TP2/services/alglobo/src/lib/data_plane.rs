@@ -2,18 +2,18 @@ use crate::types::BoxResult;
 
 // ----------------------------------------------------------------------------
 
-pub struct Leader {}
+pub struct DataPlane {}
 
-impl Leader {
+impl DataPlane {
     pub fn new() -> BoxResult<Self> {
-        let ret = Leader {};
+        let ret = DataPlane {};
         Ok(ret)
     }
 
     pub fn run_iteration(&self) -> BoxResult<()> {
-        println!("<Leader> Working...");
+        println!("[INFO] (Data) Working...");
         std::thread::sleep(std::time::Duration::from_secs(3));
-        println!("<Leader> Worked a lot!");
+        println!("[INFO] (Data) Finished work iteration");
         Ok(())
     }
 }

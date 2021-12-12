@@ -1,6 +1,10 @@
-use std::thread::sleep;
+use std::{thread::sleep, time::Duration};
 
-use lib::{constants::RESTART_TIME, replica::Replica, types::BoxResult};
+use lib::{replica::Replica, types::BoxResult};
+
+// ----------------------------------------------------------------------------
+
+pub const RESTART_TIME: Duration = Duration::from_secs(10);
 
 // ----------------------------------------------------------------------------
 
