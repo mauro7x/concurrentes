@@ -1,6 +1,6 @@
 use std::{thread::sleep, time::Duration};
 
-use lib::{replica::Replica, types::BoxResult};
+use lib::{replica::Replica, types::common::BoxResult};
 
 // ----------------------------------------------------------------------------
 

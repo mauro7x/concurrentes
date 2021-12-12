@@ -4,8 +4,8 @@ use std::{
 };
 
 use crate::{
-    constant::env::{CTRL_PORT, DIRECTORY_HOST, DIRECTORY_PORT},
-    types::BoxResult,
+    constants::env::{CTRL_PORT, DIRECTORY_HOST, DIRECTORY_PORT},
+    types::common::BoxResult,
 };
 
 // ----------------------------------------------------------------------------

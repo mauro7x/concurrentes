@@ -1,5 +1,5 @@
 // Public
-pub mod constant;
+pub mod constants;
 pub mod replica;
 pub mod types;
 

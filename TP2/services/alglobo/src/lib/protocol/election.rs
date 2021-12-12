@@ -1,6 +1,6 @@
 use std::mem::size_of;
 
-use crate::types::Id;
+use crate::types::common::Id;
 
 // ----------------------------------------------------------------------------
 

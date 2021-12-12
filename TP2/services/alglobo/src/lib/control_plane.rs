@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     config::control::Config,
-    constant::{
+    constants::{
         errors::{CV_WAIT_ERROR, MUTEX_LOCK_ERROR},
         leader_election::{
             ELECTION_TIMEOUT, GET_LEADER_TIMEOUT, HEALTHCHECK_RETRIES, HEALTHCHECK_TIMEOUT,
@@ -15,7 +15,10 @@ use crate::{
     },
     directory::Directory,
     protocol::election::{Message, ELECTION, GET_LEADER, LEADER, NEW_MESSAGE, OK, PING},
-    types::{BoxResult, Id, Shared},
+    types::{
+        common::{BoxResult, Id},
+        control::Shared,
+    },
 };
 
 // ----------------------------------------------------------------------------

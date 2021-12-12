@@ -1,6 +1,6 @@
 use std::env;
 
-use crate::{constant::env::DATA_PORT, types::BoxResult};
+use crate::{constants::env::DATA_PORT, types::common::BoxResult};
 
 // ----------------------------------------------------------------------------
 
