@@ -1,34 +1,32 @@
 version: '3.1'
 
 services:
-  alglobo:
-    build: ./alglobo
-    image: tp2_alglobo
-    volumes:
-      - /usr/app/target
-    env_file:
-      - alglobo.env
+    alglobo:
+        build: ./alglobo
+        image: tp2_alglobo
+        env_file:
+            - alglobo.env
+        stdin_open: true # docker run -i // to retry queries in stdin input
+        tty: true # docker run -t
+        depends_on:
+            - airline
+            - bank
+            - hotel
 
-  airline:
-    build: ./service
-    image: tp2_service
-    volumes:
-      - /usr/app/target
-    env_file:
-      - airline.env
+    airline:
+        build: ./service
+        image: tp2_service
+        env_file:
+            - airline.env
 
-  bank:
-    build: ./service
-    image: tp2_service
-    volumes:
-      - /usr/app/target
-    env_file:
-      - bank.env
+    bank:
+        build: ./service
+        image: tp2_service
+        env_file:
+            - bank.env
 
-  hotel:
-    build: ./service
-    image: tp2_service
-    volumes:
-      - /usr/app/target
-    env_file:
-      - hotel.env
+    hotel:
+        build: ./service
+        image: tp2_service
+        env_file:
+            - hotel.env
