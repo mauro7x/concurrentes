@@ -5,13 +5,16 @@ use std::{
 };
 
 use crate::{
-    config::Config,
-    constants::{
-        CV_WAIT_ERROR, ELECTION_TIMEOUT, GET_LEADER_TIMEOUT, HEALTHCHECK_RETRIES,
-        HEALTHCHECK_TIMEOUT, MUTEX_LOCK_ERROR, REPLICA_SLEEP_TIME,
+    config::control::Config,
+    constant::{
+        errors::{CV_WAIT_ERROR, MUTEX_LOCK_ERROR},
+        leader_election::{
+            ELECTION_TIMEOUT, GET_LEADER_TIMEOUT, HEALTHCHECK_RETRIES, HEALTHCHECK_TIMEOUT,
+            REPLICA_SLEEP_TIME,
+        },
     },
     directory::Directory,
-    protocols::election::{Message, ELECTION, GET_LEADER, LEADER, NEW_MESSAGE, OK, PING},
+    protocol::election::{Message, ELECTION, GET_LEADER, LEADER, NEW_MESSAGE, OK, PING},
     types::{BoxResult, Id, Shared},
 };
 
