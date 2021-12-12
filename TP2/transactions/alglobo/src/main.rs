@@ -14,7 +14,7 @@ use lib::types::{Action, Entity, Message, Tx};
 
 // TODO: extract to config file
 const reqs_filename: &str = "./src/txs.txt";
-const timeout: Duration = Duration::from_secs(30);
+const timeout: Duration = Duration::from_secs(10);
 const failed_reqs_filename: &str = "./src/failed_reqs.txt";
 
 pub struct AlGlobo {
@@ -126,17 +126,16 @@ impl AlGlobo {
         );
 
         match res {
-            Err(err) => {
-                panic!("wait_response: critical err: {}", err);
-            },
             Ok((_, timeout_result)) if timeout_result.timed_out() => {
-                // TODO: handle timeouts/retries?
-                panic!("wait_response: timeout");
+                return Ok(Action::Abort);
             }
             Ok((responses_guard, _)) => {
-                self.process_result(&responses_guard, tx, expected_action)
-            }
-        }
+                return self.process_result(&responses_guard, tx, expected_action);
+            },
+            Err(_) => {
+                return Ok(Action::Abort);
+            },
+        };
     }
 
     fn process_result(&self, responses_guard: &MutexGuard<HashMap<Entity, Option<Action>>>, tx: Tx, expected_action: Action) -> Result<Action, Box<dyn Error>> {
