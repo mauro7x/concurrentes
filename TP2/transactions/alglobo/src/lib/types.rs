@@ -20,10 +20,4 @@ pub struct Message {
     pub tx: u32
 }
 
-#[derive(Debug)]
-pub enum Status {
-    Failed,
-    Succeeded
-}
-
 pub type Tx = u32;

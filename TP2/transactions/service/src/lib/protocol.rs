@@ -1,5 +1,5 @@
 use std::{net::UdpSocket, convert::TryInto};
-use crate::types::{Action, Entity, Message, Tx};
+use crate::types::{Action, Entity, Message};
 
 // Message structure
 //

@@ -10,7 +10,7 @@ use std::error::{Error};
 use lib::constants;
 use lib::file_logger::{FileLogger};
 use lib::protocol::{recv_msg, send_msg_to};
-use lib::types::{Action, Entity, Message, Status, Tx};
+use lib::types::{Action, Entity, Message, Tx};
 
 // TODO: extract to config file
 const reqs_filename: &str = "./src/txs.txt";
@@ -236,5 +236,9 @@ fn main() {
     let file = File::open(reqs_filename).expect("Could not open txs file");
 
     let mut app: AlGlobo = AlGlobo::new(svc_name, svc_port);
-    app.process_txs(&file, &mut failed_requests_logger);
+
+    match app.process_txs(&file, &mut failed_requests_logger) {
+        Ok(()) => (),
+        Err(err) => panic!("error: {}", err)
+    }
 }
