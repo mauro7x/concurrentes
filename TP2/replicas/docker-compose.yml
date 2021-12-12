@@ -15,8 +15,9 @@ services:
     image: tp2_alglobo_replica
     volumes:
       - ./alglobo/target:/usr/app/target
+    depends_on:
+      - directory
     environment:
       - PORT=${ALGLOBO_PORT}
-      - SLEEP=3
       - DIRECTORY_HOST=directory
       - DIRECTORY_PORT=${DIRECTORY_PORT}
