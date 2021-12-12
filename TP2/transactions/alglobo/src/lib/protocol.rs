@@ -19,7 +19,7 @@ const COMMIT_REP: u8 = b'E';
 const PREPARE_REP: u8 = b'F';
 const ABORT_REP: u8 = b'G';
 
-fn pack_message(msg: &Message, buf: &mut Vec<u8>) {
+pub fn pack_message(msg: &Message, buf: &mut Vec<u8>) {
     let from_rep = match &msg.from {
         Entity::Airline => AIRLINE_REP,
         Entity::AlGlobo => ALGLOBO_REP,

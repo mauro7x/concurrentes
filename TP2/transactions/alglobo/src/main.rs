@@ -11,7 +11,7 @@ fn main() {
     let mut failed_requests_logger = FileLogger::new(failed_reqs_filename);
     let mut app: AlGlobo = AlGlobo::new(svc_name, svc_port);
 
-    match app.run(REQS_FILENAME) {
+    match app.run(REQS_FILENAME, &mut failed_requests_logger) {
         Ok(()) => (),
         Err(err) => panic!("error: {}", err),
     }

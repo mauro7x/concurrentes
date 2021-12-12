@@ -2,6 +2,7 @@ use crate::{
     constants,
     file_logger::FileLogger,
     protocol::{recv_msg, send_msg_to},
+    service::{AirlineService, BankService, HotelService},
     types::{Action, Entity, Message, Transaction, Tx},
 };
 
@@ -17,7 +18,9 @@ use std::{
 
 pub struct AlGlobo {
     responses: Arc<(Mutex<HashMap<Entity, Option<Action>>>, Condvar)>,
-    services_addr: HashMap<Entity, String>,
+    bank_service: BankService,
+    hotel_service: HotelService,
+    airline_service: AirlineService,
     socket: UdpSocket,
     tx_log: HashMap<Tx, Action>,
 }
@@ -56,7 +59,24 @@ impl AlGlobo {
 
         let alglobo = AlGlobo {
             responses,
-            services_addr,
+            bank_service: BankService::new(
+                services_addr
+                    .get(&Entity::Bank)
+                    .expect("This shouldn't be possible!")
+                    .clone(),
+            ),
+            airline_service: AirlineService::new(
+                services_addr
+                    .get(&Entity::Airline)
+                    .expect("This shouldn't be possible!")
+                    .clone(),
+            ),
+            hotel_service: HotelService::new(
+                services_addr
+                    .get(&Entity::Hotel)
+                    .expect("This shouldn't be possible!")
+                    .clone(),
+            ),
             socket,
             tx_log: HashMap::new(),
         };
@@ -70,11 +90,13 @@ impl AlGlobo {
     fn clone(&self) -> Self {
         AlGlobo {
             responses: self.responses.clone(),
-            services_addr: self.services_addr.clone(),
             socket: self
                 .socket
                 .try_clone()
                 .expect("clone: could not clone socket"),
+            bank_service: self.bank_service.clone(),
+            hotel_service: self.hotel_service.clone(),
+            airline_service: self.airline_service.clone(),
             tx_log: self.tx_log.clone(),
         }
     }
@@ -97,19 +119,19 @@ impl AlGlobo {
             tx,
         };
 
-        for (_, addr) in &self.services_addr {
-            match send_msg_to(&mut self.socket, &res, &addr) {
-                Ok(_) => (),
-                Err(err) => {
-                    // there are unreachable services
-                    // if we are not already aborting, we should abort tx
-                    match action {
-                        Action::Abort => return Err(Box::new(err)),
-                        _ => {
-                            self.abort_tx(tx)?;
-                            return Err(Box::new(err));
-                        }
-                    }
+        let mut do_steps = || -> std::io::Result<()> {
+            self.bank_service.send_message(&mut self.socket, &res)?;
+            self.hotel_service.send_message(&mut self.socket, &res)?;
+            self.airline_service.send_message(&mut self.socket, &res)?;
+            Ok(())
+        };
+
+        if let Err(err) = do_steps() {
+            match action {
+                Action::Abort => return Err(Box::new(err)),
+                _ => {
+                    self.abort_tx(tx)?;
+                    return Err(Box::new(err));
                 }
             }
         }
@@ -192,26 +214,26 @@ impl AlGlobo {
         payments_queue: &str,
         failed_requests_logger: &mut FileLogger,
     ) -> Result<(), Box<dyn Error>> {
-        println!("{:?}", std::env::current_exe());
         let mut rdr = csv::Reader::from_path(payments_queue)?;
+
         for result in rdr.deserialize() {
             let tx: Transaction = result?;
-            let action = self.process_tx(tx.id)?;
+            let action = self.process_tx(&tx)?;
             // TODO HABILITAR MANEJO DE FALLAS
-            failed_requests_logger.log(tx, &action);
+            failed_requests_logger.log(tx.id, &action);
         }
         Ok(())
     }
 
-    fn process_tx(&mut self, tx: Tx) -> Result<Action, Box<dyn Error>> {
+    fn process_tx(&mut self, tx: &Transaction) -> Result<Action, Box<dyn Error>> {
         // TODO: ESTADO COMPARTIDO
-        match self.tx_log.get(&tx) {
-            Some(Action::Commit) => self.commit_tx(tx),
-            Some(Action::Abort) => self.abort_tx(tx),
+        match self.tx_log.get(&tx.id) {
+            Some(Action::Commit) => self.commit_tx(tx.id),
+            Some(Action::Abort) => self.abort_tx(tx.id),
             Some(Action::Prepare) | None => {
-                match self.prepare_tx(tx)? {
-                    Action::Prepare => self.commit_tx(tx),
-                    Action::Abort => self.abort_tx(tx),
+                match self.prepare_tx(tx.id)? {
+                    Action::Prepare => self.commit_tx(tx.id),
+                    Action::Abort => self.abort_tx(tx.id),
                     // commit should never be returned
                     Action::Commit => {
                         panic!("process_tx: prepare returned commit as response action")

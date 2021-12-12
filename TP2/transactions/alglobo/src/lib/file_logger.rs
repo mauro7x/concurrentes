@@ -1,8 +1,6 @@
 use crate::types::{Action, Tx};
-use std::{
-    fs::{self, File, OpenOptions},
-    io::Write,
-};
+use std::{fs::File, io::Write};
+
 pub struct FileLogger {
     file: File,
 }
