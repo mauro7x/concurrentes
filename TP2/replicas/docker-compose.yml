@@ -4,8 +4,6 @@ services:
   directory:
     build: ./directory
     image: tp2_directory
-    volumes:
-      - ./directory/target:/usr/app/target
     environment:
       - PORT=${DIRECTORY_PORT}
       - MAX_NODES=${MAX_NODES}
@@ -13,8 +11,6 @@ services:
   alglobo:
     build: ./alglobo
     image: tp2_alglobo_replica
-    volumes:
-      - ./alglobo/target:/usr/app/target
     depends_on:
       - directory
     environment:

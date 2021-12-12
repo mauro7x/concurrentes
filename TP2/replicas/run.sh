@@ -2,10 +2,8 @@
 
 REPLICAS="${1:-0}"
 
-# build
-sh -c 'cd alglobo && cargo build --release' &&
-sh -c 'cd directory && cargo build --release' &&
+echo "Running with $REPLICAS replicas"
+docker-compose up --build --scale alglobo=$REPLICAS
 
-# run
-echo "Running with $REPLICAS replicas" &&
-docker-compose up --scale alglobo=$REPLICAS
+echo "Removing dangling images"
+docker image prune -f

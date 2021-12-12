@@ -2,3 +2,5 @@
 
 sh -c 'cd alglobo && cargo clean'
 sh -c 'cd directory && cargo clean'
+
+docker system prune -f
