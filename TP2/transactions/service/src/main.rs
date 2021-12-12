@@ -94,13 +94,20 @@ impl Service {
             (Some(Action::Abort), Action::Prepare) => {
                 println!("[tx {}] retrying previously aborted transaction", req.tx);
                 self.prepare_tx(&src, &req)
-            }
+            },
             // retrying a previously committed transaction -> do nothing and resend status
             (Some(Action::Commit), Action::Prepare) => {
                 println!("[tx {}] transaction has already been committed", req.tx);
                 self.respond_message(&src, &req, Action::Commit)
-            }
-            // invalid action flow
+            },
+            // communication issue, we did not receive the prepare and transaction was aborted
+            (None, Action::Abort) => {
+                // abort transaction but do NOT release resources, since they were not reserved
+                self.tx_log.insert(req.tx, Action::Abort);
+                println!("[tx {}] aborting new transaction", req.tx);
+                self.respond_message(&src, &req, Action::Abort)
+            },
+            // invalid action flow (should never happen)
             _ => panic!("process_txs: invalid action sequence detected")
         }
     }
