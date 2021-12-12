@@ -23,5 +23,5 @@ RUN cargo build --release --bin app
 # We do not need the Rust toolchain to run the binary!
 FROM debian:bullseye-slim AS runtime
 WORKDIR /usr/app
-COPY --from=builder /usr/app/target/release/app /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/app"]
+COPY --from=builder /usr/app /usr/app
+ENTRYPOINT ["/usr/app/target/release/app"]
