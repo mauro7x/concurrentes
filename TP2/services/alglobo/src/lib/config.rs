@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    constants::{DIRECTORY_HOST, DIRECTORY_PORT, PORT},
+    constants::{CTRL_PORT, DIRECTORY_HOST, DIRECTORY_PORT},
     types::BoxResult,
 };
 
@@ -17,7 +17,7 @@ pub struct Config {
 
 impl Config {
     pub fn new() -> BoxResult<Self> {
-        let port: u16 = env::var(PORT)?.parse()?;
+        let port: u16 = env::var(CTRL_PORT)?.parse()?;
         let directory_addr = Config::get_directory_addr()?;
 
         Ok(Config {

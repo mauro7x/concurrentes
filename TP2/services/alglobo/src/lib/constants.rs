@@ -25,6 +25,7 @@ be this value multiplied by the retries
 pub const HEALTHCHECK_TIMEOUT: Duration = Duration::from_secs(2);
 
 // Env vars
-pub const PORT: &str = "PORT";
+pub const CTRL_PORT: &str = "CONTROL_PORT";
+pub const DATA_PORT: &str = "DATA_PORT";
 pub const DIRECTORY_HOST: &str = "DIRECTORY_HOST";
 pub const DIRECTORY_PORT: &str = "DIRECTORY_PORT";

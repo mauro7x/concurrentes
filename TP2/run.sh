@@ -28,17 +28,15 @@ echo -e "${FC}=${NC}            Santiago Klein            ${FC}=${NC}"
 echo -e "${FC}=${NC}            Tomás  Nocetti            ${FC}=${NC}"
 echo -e "${FC}========================================${NC}\n"
 
-echo "Pre-running tasks:"
-
-printf "${GREY}  > Creating services...${NC}"
+printf "> Creating services..."
 docker-compose build > /dev/null 2>&1
-echo -e " ${CHECK}"
+echo -e " ${CHECK}\n"
 
-printf "${GREY}  > Removing dangling images...${NC}"
+printf "> Removing dangling images..."
 docker image prune -f > /dev/null 2>&1
-echo -e " ${CHECK}"
+echo -e " ${CHECK}\n"
 
-echo -e "\n${CYANB}Running with ${REPLICAS} replicas...${NC}"
+echo -e "${CYANB}> Running with ${REPLICAS} replicas...${NC}"
 docker-compose up --scale alglobo=$REPLICAS
 
 echo -e "\n${CYANB}Bye bye!${NC}"
