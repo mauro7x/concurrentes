@@ -193,7 +193,7 @@ impl Control {
         let mut directory = self.directory()?;
         let nodes = directory.get_updated_nodes()?;
 
-        for (_id, ip) in nodes {
+        for ip in nodes.values() {
             self.socket.send_to(&msg, self.ip2addr(ip))?;
         }
 
