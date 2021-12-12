@@ -1,20 +1,38 @@
 version: '3.1'
 
 services:
-  directory:
-    build: ./services/directory
-    image: tp2_directory
-    environment:
-      - PORT=${DIRECTORY_PORT}
-      - MAX_NODES=${MAX_NODES}
+    directory:
+        build: ./services/directory
+        image: tp2_directory
+        environment:
+            - PORT=${DIRECTORY_PORT}
+            - MAX_NODES=${MAX_NODES}
 
-  alglobo:
-    build: ./services/alglobo
-    image: tp2_alglobo
-    depends_on:
-      - directory
-    environment:
-      - CONTROL_PORT=${ALGLOBO_CONTROL_PORT}
-      - DATA_PORT=${ALGLOBO_DATA_PORT}
-      - DIRECTORY_HOST=directory
-      - DIRECTORY_PORT=${DIRECTORY_PORT}
+    alglobo:
+        build: ./services/alglobo
+        image: tp2_alglobo
+        depends_on:
+            - directory
+            - airline
+            - bank
+            - hotel
+        environment:
+            - CONTROL_PORT=${ALGLOBO_CONTROL_PORT}
+            - DATA_PORT=${ALGLOBO_DATA_PORT}
+            - DIRECTORY_HOST=directory
+            - DIRECTORY_PORT=${DIRECTORY_PORT}
+    airline:
+        build: ./services/generic-service
+        image: tp2_generic_service
+        env_file:
+            - airline.env
+    bank:
+        build: ./services/generic-service
+        image: tp2_generic_service
+        env_file:
+            - bank.env
+    hotel:
+        build: ./services/generic-service
+        image: tp2_generic_service
+        env_file:
+            - hotel.env
