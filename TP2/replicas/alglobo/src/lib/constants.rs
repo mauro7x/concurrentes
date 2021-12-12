@@ -15,3 +15,8 @@ pub const CV_WAIT_ERROR: &str = "Failed to wait CV";
 
 // Leader election
 pub const ELECTION_TIMEOUT: Duration = Duration::from_secs(3);
+
+// Env vars
+pub const PORT: &str = "PORT";
+pub const DIRECTORY_HOST: &str = "DIRECTORY_HOST";
+pub const DIRECTORY_PORT: &str = "DIRECTORY_PORT";

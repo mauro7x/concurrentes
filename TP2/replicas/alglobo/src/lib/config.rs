@@ -3,7 +3,10 @@ use std::{
     net::{SocketAddr, ToSocketAddrs},
 };
 
-use crate::types::BoxResult;
+use crate::{
+    constants::{DIRECTORY_HOST, DIRECTORY_PORT, PORT},
+    types::BoxResult,
+};
 
 // ----------------------------------------------------------------------------
 
@@ -14,7 +17,7 @@ pub struct Config {
 
 impl Config {
     pub fn new() -> BoxResult<Self> {
-        let port: u16 = env::var("PORT")?.parse()?;
+        let port: u16 = env::var(PORT)?.parse()?;
         let directory_addr = Config::get_directory_addr()?;
 
         Ok(Config {
@@ -24,8 +27,8 @@ impl Config {
     }
 
     fn get_directory_addr() -> BoxResult<SocketAddr> {
-        let directory_host = env::var("DIRECTORY_HOST")?;
-        let directory_port: u16 = env::var("DIRECTORY_PORT")?.parse()?;
+        let directory_host = env::var(DIRECTORY_HOST)?;
+        let directory_port: u16 = env::var(DIRECTORY_PORT)?.parse()?;
         let directory_dns_query = format!("{}:{}", directory_host, directory_port);
 
         let directory_addr = directory_dns_query
