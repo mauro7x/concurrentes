@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{Write};
-use crate::types::{Status, Tx};
+use crate::types::{Action, Tx};
 
 pub struct FileLogger {
     file: File
@@ -13,7 +13,7 @@ impl FileLogger {
         }
     }
 
-    pub fn log(&mut self, tx: Tx, status: &Status) {
-        self.file.write(format!("[tx {}] - {:?}", tx, status).as_bytes()).expect("FileLog.log: could not write to log file");
+    pub fn log(&mut self, tx: Tx, action: &Action) {
+        self.file.write(format!("[tx {}] - {:?}", tx, action).as_bytes()).expect("FileLog.log: could not write to log file");
     }
 }
