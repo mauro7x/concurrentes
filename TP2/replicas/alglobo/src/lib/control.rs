@@ -155,7 +155,7 @@ impl Control {
 
         let mut message: Message = NEW_MESSAGE;
         unshared_socket.set_read_timeout(Some(GET_LEADER_TIMEOUT))?;
-        if let Ok(_) = unshared_socket.recv_from(&mut message) {
+        if unshared_socket.recv_from(&mut message).is_ok() {
             let [opcode, id] = message;
             match opcode {
                 LEADER => {
@@ -262,7 +262,7 @@ impl Control {
             match self.get_leader_addr()? {
                 Some(leader_addr) => {
                     socket.send_to(&[PING], leader_addr)?;
-                    if let Ok(_) = socket.recv_from(&mut recv_buf) {
+                    if socket.recv_from(&mut recv_buf).is_ok() {
                         return Ok(true);
                     } else {
                         if attempts == HEALTHCHECK_RETRIES {
@@ -326,7 +326,7 @@ impl Control {
 
         Ok(directory
             .get_node_addr(leader_id)?
-            .and_then(|ip| Some(self.ip2addr(ip))))
+            .map(|ip| self.ip2addr(ip)))
     }
 
     fn set_shared_value<V>(&mut self, shared: Arc<Shared<V>>, v: V) -> BoxResult<()> {

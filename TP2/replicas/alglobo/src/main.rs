@@ -1,5 +1,6 @@
-use lib::{constants::RESTART_TIME, replica::Replica, types::BoxResult};
 use std::thread::sleep;
+
+use lib::{constants::RESTART_TIME, replica::Replica, types::BoxResult};
 
 // ----------------------------------------------------------------------------
 

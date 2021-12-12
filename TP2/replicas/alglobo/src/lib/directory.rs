@@ -67,21 +67,6 @@ impl Directory {
         }
     }
 
-    pub fn print(&self) {
-        if self.id2ip.is_empty() {
-            return println!("{:=^27}\n={:^25}=\n{:=^27}", "", "Empty directory", "");
-        };
-
-        print!(
-            "{:=^27}\n={:^6}|{:^18}=\n={:-^25}=",
-            "", "ID", "ADDRESS", ""
-        );
-        for node in &self.id2ip {
-            print!("\n={:^6}|{:^18}=", node.0, node.1);
-        }
-        println!("\n{:=^27}", "")
-    }
-
     pub fn get_updated_nodes(&mut self) -> BoxResult<&Id2Ip> {
         self.update()?;
         Ok(&self.id2ip)
