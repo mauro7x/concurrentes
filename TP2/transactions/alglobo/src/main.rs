@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::env;
 use std::sync::{Arc, Condvar, Mutex};
 use std::fs::File;
-use std::io::{BufRead, BufReader, stdin};
+use std::io::{BufRead, BufReader};
 use std::thread::{spawn};
 use std::time::Duration;
 use lib::constants;
@@ -22,10 +22,6 @@ pub struct AlGlobo {
     socket: UdpSocket,
     tx_log: HashMap<Tx, Action>
 }
-
-// fn prompt() {
-//     println!("Enter the number of transaction you want to retry");
-// }
 
 fn populate_services_addr(services_addr: &mut HashMap<Entity, String>) {
     let airline_addr = env::var(constants::AIRLINE_ADDR).expect("AIRLINE_ADDR env variable undefined");
@@ -157,20 +153,8 @@ impl AlGlobo {
         println!("Finished processing file transactions");
     }
 
-    // fn process_txs_from_input(&mut self, failed_requests_logger: &FileLogger) {
-    //     prompt();
-    //     for line in stdin().lock().lines() {
-    //         if let Ok(tx) = line.unwrap().parse::<u32>() {
-    //             println!("retrying tx: {}", tx);
-    //             self.process_tx(tx);
-    //         }
-    //         prompt();
-    //     }
-    // }
-
     fn process_txs(&mut self, file: &File, failed_requests_logger: &mut FileLogger) {
         self.process_txs_from_file(file, failed_requests_logger);
-        // self.process_txs_from_input(failed_requests_logger);
     }
 
     fn process_tx(&mut self, tx: Tx) -> bool {
