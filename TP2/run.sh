@@ -22,9 +22,17 @@ PAYMENTS_FILE="${2:-./examples/payments.csv}"
 function copy_build_dependencies {
   # Shared files
   mkdir -p "./services/alglobo/shared" &&
+  mkdir -p "./services/directory/shared" &&
   mkdir -p "./services/generic-service/shared" &&
+
+  # Protocol: alglobo <-> generic-service
   cp ./common/alglobo_generic-service_protocol.rs ./services/alglobo/shared/alglobo_generic-service_protocol.rs &&
   cp ./common/alglobo_generic-service_protocol.rs ./services/generic-service/shared/alglobo_generic-service_protocol.rs
+
+  # Protocol: alglobo <-> directory
+  cp ./common/alglobo_directory_protocol.rs ./services/alglobo/shared/alglobo_directory_protocol.rs &&
+  cp ./common/alglobo_directory_protocol.rs ./services/directory/shared/alglobo_directory_protocol.rs
+
 }
 
 function copy_runtime_dependencies {
