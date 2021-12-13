@@ -1,4 +1,4 @@
-# _AlGlobo.com_ (pagos)
+# _AlGlobo.com_ (Sistema de Pagos)
 
 TODO: Descripción.
 

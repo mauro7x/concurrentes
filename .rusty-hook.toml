@@ -1,5 +1,5 @@
 [hooks]
-pre-commit = "# bash ./hooks/pre-commit TP2 <--- descomentar"
+pre-commit = "bash ./hooks/pre-commit-tp2"
 
 [logging]
 verbose = true
