@@ -208,17 +208,17 @@ impl DataPlane {
     }
 
     fn commit_tx(&mut self, tx: Tx) -> BoxResult<Action> {
-        self.tx_log.insert(tx, Action::Commit);
+        self.tx_log.insert(tx, Action::Commit)?;
         self.broadcast_until_getting_response_from_all_services(tx, Action::Commit, None)
     }
 
     fn abort_tx(&mut self, tx: Tx) -> BoxResult<Action> {
-        self.tx_log.insert(tx, Action::Abort);
+        self.tx_log.insert(tx, Action::Abort)?;
         self.broadcast_until_getting_response_from_all_services(tx, Action::Abort, None)
     }
 
     fn prepare_tx(&mut self, tx: Tx) -> BoxResult<Action> {
-        self.tx_log.insert(tx, Action::Prepare);
+        self.tx_log.insert(tx, Action::Prepare)?;
         self.broadcast_until_getting_response_from_all_services(tx, Action::Prepare, Some(N_PREPARE_RETRIES))
     }
 
