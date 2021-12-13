@@ -209,6 +209,9 @@ impl Control {
         Ok(())
     }
 
+    // AtomicBool is no useful because we need to
+    // wait for this with a CV, so we need a MutexGuard
+    #[allow(clippy::mutex_atomic)]
     fn got_ok_within_timeout(&self) -> BoxResult<bool> {
         let got_ok = *self
             .got_ok
