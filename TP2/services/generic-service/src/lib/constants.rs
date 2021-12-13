@@ -1,3 +1,4 @@
 // Env vars
-pub const SVC_HOSTNAME: &str = "SVC_HOSTNAME";
-pub const SVC_PORT: &str = "SVC_PORT";
+pub const NAME: &str = "NAME";
+pub const PORT: &str = "PORT";
+pub const FAILURE_RATE: &str = "FAILURE_RATE";
