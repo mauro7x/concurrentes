@@ -10,3 +10,4 @@ mod data_plane;
 mod directory;
 mod protocol;
 mod service_directory;
+mod tx_log;

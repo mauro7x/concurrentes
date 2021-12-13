@@ -47,6 +47,13 @@ pub fn recv_msg(socket: &UdpSocket) -> BoxResult<(SocketAddr, Message)> {
 
 // ----------------------------------------------------------------------------
 // Private
+pub fn cast_action(action: &Action) -> u8 {
+    match action {
+        Action::Prepare => PREPARE_REP,
+        Action::Commit => COMMIT_REP,
+        Action::Abort => ABORT_REP,
+    }
+}
 
 fn pack_message(msg: &Message) -> Vec<u8> {
     let mut buf = vec![];
@@ -57,13 +64,10 @@ fn pack_message(msg: &Message) -> Vec<u8> {
         Entity::Bank => BANK_REP,
         Entity::Hotel => HOTEL_REP,
     };
+
     buf.push(from_rep);
 
-    let action_rep = match &msg.action {
-        Action::Prepare => PREPARE_REP,
-        Action::Commit => COMMIT_REP,
-        Action::Abort => ABORT_REP,
-    };
+    let action_rep = cast_action(&msg.action);
     buf.push(action_rep);
 
     buf.append(&mut msg.tx.to_le_bytes().to_vec());

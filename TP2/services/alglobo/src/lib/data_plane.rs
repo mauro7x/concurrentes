@@ -14,6 +14,7 @@ use crate::{
     },
     protocol::data::recv_msg,
     service_directory::ServiceDirectory,
+    tx_log::TxLog,
     types::{
         common::BoxResult,
         control::Shared,
@@ -28,7 +29,7 @@ use csv::Reader;
 pub struct DataPlane {
     responses: Arc<Shared<Responses>>,
     socket: UdpSocket,
-    tx_log: HashMap<Tx, Action>,
+    tx_log: TxLog,
     services: ServiceDirectory,
 }
 
@@ -49,7 +50,7 @@ impl DataPlane {
         let ret = DataPlane {
             responses: Arc::new(Shared::new(responses)),
             socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
-            tx_log: HashMap::new(),
+            tx_log: TxLog::new()?,
             services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr),
         };
 
@@ -198,17 +199,17 @@ impl DataPlane {
     }
 
     fn commit_tx(&mut self, tx: Tx) -> BoxResult<Action> {
-        self.tx_log.insert(tx, Action::Commit);
+        self.tx_log.insert(tx, Action::Commit)?;
         self.broadcast_message_and_wait(tx, Action::Commit)
     }
 
     fn abort_tx(&mut self, tx: Tx) -> BoxResult<Action> {
-        self.tx_log.insert(tx, Action::Abort);
+        self.tx_log.insert(tx, Action::Abort)?;
         self.broadcast_message_and_wait(tx, Action::Abort)
     }
 
     fn prepare_tx(&mut self, tx: Tx) -> BoxResult<Action> {
-        self.tx_log.insert(tx, Action::Prepare);
+        self.tx_log.insert(tx, Action::Prepare)?;
         self.broadcast_message_and_wait(tx, Action::Prepare)
     }
 
