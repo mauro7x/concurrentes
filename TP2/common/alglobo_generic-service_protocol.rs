@@ -32,6 +32,14 @@ const ABORT_REP: u8 = b'G';
 // ----------------------------------------------------------------------------
 // Public
 
+pub fn cast_action(action: &Action) -> u8 {
+    match action {
+        Action::Prepare => PREPARE_REP,
+        Action::Commit => COMMIT_REP,
+        Action::Abort => ABORT_REP,
+    }
+}
+
 pub fn send_msg_to(socket: &UdpSocket, msg: &Message, addr: &SocketAddr) -> BoxResult<usize> {
     let buf = pack_message(msg);
     let sent = socket.send_to(&buf, addr)?;
@@ -59,13 +67,10 @@ fn pack_message(msg: &Message) -> Vec<u8> {
         Entity::Bank => BANK_REP,
         Entity::Hotel => HOTEL_REP,
     };
+
     buf.push(from_rep);
 
-    let action_rep = match &msg.action {
-        Action::Prepare => PREPARE_REP,
-        Action::Commit => COMMIT_REP,
-        Action::Abort => ABORT_REP,
-    };
+    let action_rep = cast_action(&msg.action);
     buf.push(action_rep);
 
     buf.append(&mut msg.tx.to_le_bytes().to_vec());
