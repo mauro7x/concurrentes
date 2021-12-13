@@ -2,6 +2,7 @@
 
 [![TP1 CI](https://github.com/mauro7x/concurrentes/actions/workflows/tp1_ci.yml/badge.svg?branch=main)](https://github.com/mauro7x/concurrentes/actions/workflows/tp1_ci.yml)
 [![TP1 CD](https://github.com/mauro7x/concurrentes/actions/workflows/tp1_cd.yml/badge.svg)](https://github.com/mauro7x/concurrentes/actions/workflows/tp1_cd.yml)
+[![TP2 CI](https://github.com/mauro7x/concurrentes/actions/workflows/tp2_ci.yml/badge.svg?branch=main)](https://github.com/mauro7x/concurrentes/actions/workflows/tp2_ci.yml)
 
 Trabajos prácticos de la materia [**Técnicas de Programación Concurrente I**](https://concurrentes-fiuba.github.io) en el Segundo Cuatrimestre del año 2021, dictada en la Facultad de Ingeniería, Universidad de Buenos Aires.
 
