@@ -57,7 +57,7 @@ impl Replica {
         let mut data_plane = DataPlane::new()?;
 
         while self.control.am_i_leader()? {
-            data_plane.run()?;
+            data_plane.run_iteration()?;
         }
 
         // TODO: differentiate if we leave because
