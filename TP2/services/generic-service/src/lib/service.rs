@@ -21,7 +21,7 @@ pub struct Service {
     name: Entity,
     socket: UdpSocket,
     failure_rate: f64,
-    response_time: u64,
+    response_time_ms: u64,
     tx_log: HashMap<Tx, Action>,
 }
 
@@ -32,7 +32,7 @@ impl Service {
             name,
             port,
             failure_rate,
-            response_time,
+            response_time_ms,
         } = Config::new()?;
 
         println!("[DEBUG] Crating entity...");
@@ -48,7 +48,7 @@ impl Service {
             name: entity,
             socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
             failure_rate,
-            response_time,
+            response_time_ms,
             tx_log: HashMap::new(),
         };
 
@@ -139,7 +139,7 @@ impl Service {
             tx,
         };
 
-        let response_time = time::Duration::from_millis(self.response_time);
+        let response_time = time::Duration::from_millis(self.response_time_ms);
 
         thread::sleep(response_time);
 

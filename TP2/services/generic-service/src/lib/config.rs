@@ -1,7 +1,7 @@
 use std::env;
 
 use crate::{
-    constants::{FAILURE_RATE, NAME, PORT, RESPONSE_TIME},
+    constants::{FAILURE_RATE, NAME, PORT, RESPONSE_TIME_MS},
     types::common::BoxResult,
 };
 
@@ -11,7 +11,7 @@ pub struct Config {
     pub name: String,
     pub port: u16,
     pub failure_rate: f64,
-    pub response_time: u64,
+    pub response_time_ms: u64,
 }
 
 impl Config {
@@ -23,7 +23,7 @@ impl Config {
         let failure_rate = env::var(FAILURE_RATE)
             .unwrap_or_else(|_| "0.3".to_string())
             .parse()?;
-        let response_time = env::var(RESPONSE_TIME)
+        let response_time_ms = env::var(RESPONSE_TIME_MS)
             .unwrap_or_else(|_| "1000".to_string())
             .parse()?;
 
@@ -31,7 +31,7 @@ impl Config {
             name,
             port,
             failure_rate,
-            response_time,
+            response_time_ms,
         })
     }
 }

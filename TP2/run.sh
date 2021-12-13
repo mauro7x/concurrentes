@@ -15,8 +15,25 @@ FC=$CYAN
 
 # Vars
 REPLICAS="${1:-0}"
+PAYMENTS_FILE="${2:-./examples/payments.csv}"
 
-# ---
+# Functions
+
+function copy_build_dependencies {
+  # Shared files
+  mkdir -p "./services/alglobo/shared" &&
+  mkdir -p "./services/generic-service/shared" &&
+  cp ./common/alglobo_generic-service_protocol.rs ./services/alglobo/shared/alglobo_generic-service_protocol.rs &&
+  cp ./common/alglobo_generic-service_protocol.rs ./services/generic-service/shared/alglobo_generic-service_protocol.rs
+}
+
+function copy_runtime_dependencies {
+  # Payments source
+  mkdir -p "./.tmp" &&
+  cp "${PAYMENTS_FILE}" ./.tmp/payments.csv
+}
+
+# Main script
 
 echo -e "${FC}========================================${NC}"
 echo -e "${FC}=${NC}       ${CYANB}AlGlobo: Sistema de Pagos      ${FC}=${NC}"
@@ -31,7 +48,11 @@ echo -e "${FC}=${NC}            Santiago Klein            ${FC}=${NC}"
 echo -e "${FC}=${NC}            Tomás  Nocetti            ${FC}=${NC}"
 echo -e "${FC}========================================${NC}\n"
 
-printf "> Creating services..."
+printf "> Copying build dependencies..."
+copy_build_dependencies
+echo -e " ${CHECK}\n"
+
+printf "> Building and creating services..."
 docker-compose build > /dev/null 2>&1
 echo -e " ${CHECK}\n"
 
@@ -39,8 +60,9 @@ printf "> Removing dangling images..."
 docker image prune -f > /dev/null 2>&1
 echo -e " ${CHECK}\n"
 
-echo -e "${CYANB}> Copying necessary dependencies...${NC}"
-cp ./assets/payments.example.csv ./assets/payments.csv
+printf "> Copying runtime dependencies..."
+copy_runtime_dependencies
+echo -e " ${CHECK}\n"
 
 echo -e "${CYANB}> Running with ${REPLICAS} replicas...${NC}"
 docker-compose up --scale alglobo=$REPLICAS

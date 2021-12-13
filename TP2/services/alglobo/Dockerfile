@@ -6,7 +6,9 @@ WORKDIR /usr/app
 RUN echo "fn main() {}" > dummy.rs
 COPY dummy.Cargo.toml Cargo.toml
 RUN cargo build --release
+RUN rm dummy.rs
+
 COPY . .
-RUN rm dummy.Cargo.toml dummy.rs
+COPY ./shared/alglobo_generic-service_protocol.rs ./src/lib/protocol/data.rs
 RUN cargo build --release
 CMD ["target/release/app"]
