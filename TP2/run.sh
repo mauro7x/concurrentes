@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit when any command fails
+set -e
+
 # Constants
 CYAN='\033[0;36m'
 CYANB='\033[1;36m'
@@ -29,7 +32,7 @@ echo -e "${FC}=${NC}            Tomás  Nocetti            ${FC}=${NC}"
 echo -e "${FC}========================================${NC}\n"
 
 printf "> Creating services..."
-docker-compose build # > /dev/null 2>&1
+docker-compose build > /dev/null 2>&1
 echo -e " ${CHECK}\n"
 
 printf "> Removing dangling images..."
