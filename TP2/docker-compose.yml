@@ -34,6 +34,7 @@ services:
       - ./config/airline.env
     environment:
       - PORT=${SERVICE_PORT}
+      - RESPONSE_TIME=${SERVICE_RESPONSE_TIME}
 
   bank:
     build: ./services/generic-service
@@ -42,6 +43,7 @@ services:
       - ./config/bank.env
     environment:
       - PORT=${SERVICE_PORT}
+      - RESPONSE_TIME=${SERVICE_RESPONSE_TIME}
 
   hotel:
     build: ./services/generic-service
@@ -50,3 +52,4 @@ services:
       - ./config/hotel.env
     environment:
       - PORT=${SERVICE_PORT}
+      - RESPONSE_TIME=${SERVICE_RESPONSE_TIME}

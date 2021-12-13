@@ -2,3 +2,4 @@
 pub const NAME: &str = "NAME";
 pub const PORT: &str = "PORT";
 pub const FAILURE_RATE: &str = "FAILURE_RATE";
+pub const RESPONSE_TIME: &str = "RESPONSE_TIME";

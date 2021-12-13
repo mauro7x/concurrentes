@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     net::{SocketAddr, UdpSocket},
+    thread, time,
 };
 
 use rand::{thread_rng, Rng};
@@ -20,6 +21,7 @@ pub struct Service {
     name: Entity,
     socket: UdpSocket,
     failure_rate: f64,
+    response_time: u64,
     tx_log: HashMap<Tx, Action>,
 }
 
@@ -30,6 +32,7 @@ impl Service {
             name,
             port,
             failure_rate,
+            response_time,
         } = Config::new()?;
 
         println!("[DEBUG] Crating entity...");
@@ -45,6 +48,7 @@ impl Service {
             name: entity,
             socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
             failure_rate,
+            response_time,
             tx_log: HashMap::new(),
         };
 
@@ -134,6 +138,10 @@ impl Service {
             action,
             tx,
         };
+
+        let response_time = time::Duration::from_millis(self.response_time);
+
+        thread::sleep(response_time);
 
         send_msg_to(&self.socket, &msg, addr)?;
 

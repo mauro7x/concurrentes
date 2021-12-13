@@ -85,7 +85,7 @@ impl DataPlane {
 
         wtr.flush()?;
 
-        fs::copy(TEMP_PAYMENTS_TO_PROCESS, PAYMENTS_TO_PROCESS)?; // Copy foo.txt to bar.txt
+        fs::copy(TEMP_PAYMENTS_TO_PROCESS, PAYMENTS_TO_PROCESS)?;
 
         Ok(())
     }
