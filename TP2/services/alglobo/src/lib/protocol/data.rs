@@ -65,12 +65,6 @@ fn unpack_message(buf: &Vec<u8>) -> Message {
     Message { from, action, tx }
 }
 
-pub fn send_msg_to(socket: &mut UdpSocket, msg: &Message, dest: &String) -> std::io::Result<usize> {
-    let mut buf: Vec<u8> = Vec::new();
-    pack_message(msg, &mut buf);
-    socket.send_to(&buf, dest)
-}
-
 pub fn recv_msg(socket: &mut UdpSocket) -> std::io::Result<(String, Message)> {
     let mut buf = vec![0; 6];
     let (_, src) = socket.recv_from(&mut buf)?;

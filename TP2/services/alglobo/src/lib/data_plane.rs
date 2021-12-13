@@ -4,8 +4,7 @@ use crate::types::BoxResult;
 
 use crate::{
     config::data::Config,
-    file_logger::FileLogger,
-    protocol::data::{recv_msg, send_msg_to},
+    protocol::data::recv_msg,
     service::{AirlineService, BankService, HotelService},
     types::{Action, Entity, Message, Transaction, Tx},
 };
@@ -13,7 +12,6 @@ use crate::{
 use std::fs::File;
 use std::{
     collections::HashMap,
-    env,
     error::Error,
     net::UdpSocket,
     sync::{Arc, Condvar, Mutex, MutexGuard},
@@ -187,7 +185,7 @@ impl DataPlane {
         Ok(response_action)
     }
 
-    pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn run_iteration(&mut self) -> Result<(), Box<dyn Error>> {
         let mut iter = self.payments_file.deserialize();
 
         if let Some(result) = iter.next() {
@@ -228,10 +226,6 @@ impl DataPlane {
     fn prepare_tx(&mut self, tx: Tx) -> Result<Action, Box<dyn Error>> {
         self.tx_log.insert(tx, Action::Prepare);
         self.broadcast_message_and_wait(tx, Action::Prepare)
-    }
-
-    pub fn run_iteration(&self) -> BoxResult<()> {
-        Ok(())
     }
 }
 

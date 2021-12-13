@@ -23,7 +23,7 @@ impl Replica {
         Ok(ret)
     }
 
-    pub fn run(&mut self) -> BoxResult<()> {
+    pub fn run_iteration(&mut self) -> BoxResult<()> {
         println!("[INFO] (ID: {}) Replica started", self.id);
         self.inner_run()?;
         self.control.finish()?;

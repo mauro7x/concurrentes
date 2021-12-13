@@ -1,6 +1,6 @@
 use crate::{
-    protocol::data::{pack_message, recv_msg},
-    types::{Message, Tx},
+    protocol::data::{pack_message},
+    types::{Message},
 };
 
 use std::net::UdpSocket;
