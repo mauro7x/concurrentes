@@ -37,6 +37,4 @@ pub struct Transaction {
 
 pub type Tx = u32;
 
-pub type Address = String;
-
 pub type Responses = HashMap<Entity, Option<Action>>;

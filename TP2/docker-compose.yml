@@ -1,45 +1,52 @@
 version: '3.1'
 
 services:
-    directory:
-        build: ./services/directory
-        image: tp2_directory
-        environment:
-            - PORT=${DIRECTORY_PORT}
-            - MAX_NODES=${MAX_NODES}
+  directory:
+    build: ./services/directory
+    image: tp2_directory
+    env_file:
+      - ./config/directory.env
+    environment:
+      - PORT=${DIRECTORY_PORT}
 
-    alglobo:
-        build: ./services/alglobo
-        image: tp2_alglobo
-        volumes:
-            - ./assets:/usr/app/assets
-        depends_on:
-            - directory
-            - airline
-            - bank
-            - hotel
-        environment:
-            - CONTROL_PORT=${ALGLOBO_CONTROL_PORT}
-            - DATA_PORT=${ALGLOBO_DATA_PORT}
-            - DIRECTORY_HOST=directory
-            - DIRECTORY_PORT=${DIRECTORY_PORT}
-            - AIRLINE_ADDR=airline:4000
-            - BANK_ADDR=bank:4000
-            - HOTEL_ADDR=hotel:4000
-            - PAYMENTS_CSV=${PAYMENTS_CSV}
+  alglobo:
+    build: ./services/alglobo
+    image: tp2_alglobo
+    env_file:
+      - ./config/alglobo.env
+    environment:
+      - CONTROL_PORT=${ALGLOBO_CONTROL_PORT}
+      - DATA_PORT=${ALGLOBO_DATA_PORT}
+      - DIRECTORY_PORT=${DIRECTORY_PORT}
+      - SVC_PORT=${SERVICE_PORT}
+    volumes:
+      - ./assets:/usr/app/assets
+    depends_on:
+      - directory
+      - airline
+      - bank
+      - hotel
 
-    airline:
-        build: ./services/generic-service
-        image: tp2_generic_service
-        env_file:
-            - airline.env
-    bank:
-        build: ./services/generic-service
-        image: tp2_generic_service
-        env_file:
-            - bank.env
-    hotel:
-        build: ./services/generic-service
-        image: tp2_generic_service
-        env_file:
-            - hotel.env
+  airline:
+    build: ./services/generic-service
+    image: tp2_generic_service
+    env_file:
+      - ./config/airline.env
+    environment:
+      - PORT=${SERVICE_PORT}
+
+  bank:
+    build: ./services/generic-service
+    image: tp2_generic_service
+    env_file:
+      - ./config/bank.env
+    environment:
+      - PORT=${SERVICE_PORT}
+
+  hotel:
+    build: ./services/generic-service
+    image: tp2_generic_service
+    env_file:
+      - ./config/hotel.env
+    environment:
+      - PORT=${SERVICE_PORT}

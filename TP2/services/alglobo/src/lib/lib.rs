@@ -9,4 +9,4 @@ mod control_plane;
 mod data_plane;
 mod directory;
 mod protocol;
-mod service;
+mod service_directory;

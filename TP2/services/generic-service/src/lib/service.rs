@@ -48,6 +48,8 @@ impl Service {
             tx_log: HashMap::new(),
         };
 
+        println!("[DEBUG] Service created successfully");
+
         Ok(ret)
     }
 

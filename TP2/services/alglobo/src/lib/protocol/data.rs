@@ -1,6 +1,12 @@
-use std::{convert::TryInto, net::UdpSocket};
+use std::{
+    convert::TryInto,
+    net::{SocketAddr, UdpSocket},
+};
 
-use crate::types::data::{Action, Entity, Message};
+use crate::types::{
+    common::BoxResult,
+    data::{Action, Entity, Message},
+};
 
 // ----------------------------------------------------------------------------
 
@@ -22,8 +28,27 @@ const PREPARE_REP: u8 = b'F';
 const ABORT_REP: u8 = b'G';
 
 // ----------------------------------------------------------------------------
+// Public
 
-pub fn pack_message(msg: &Message) -> Vec<u8> {
+pub fn send_msg_to(socket: &UdpSocket, msg: &Message, addr: &SocketAddr) -> BoxResult<usize> {
+    let buf = pack_message(msg);
+    let sent = socket.send_to(&buf, addr)?;
+
+    Ok(sent)
+}
+
+pub fn recv_msg(socket: &UdpSocket) -> BoxResult<(SocketAddr, Message)> {
+    let mut buf = vec![0; 6];
+    let (_, from) = socket.recv_from(&mut buf)?;
+    let msg = unpack_message(&buf)?;
+
+    Ok((from, msg))
+}
+
+// ----------------------------------------------------------------------------
+// Private
+
+fn pack_message(msg: &Message) -> Vec<u8> {
     let mut buf = vec![];
 
     let from_rep = match &msg.from {
@@ -46,35 +71,23 @@ pub fn pack_message(msg: &Message) -> Vec<u8> {
     buf
 }
 
-fn unpack_message(buf: &[u8]) -> Message {
+fn unpack_message(buf: &[u8]) -> BoxResult<Message> {
     let from = match buf[0] {
         AIRLINE_REP => Entity::Airline,
         ALGLOBO_REP => Entity::AlGlobo,
         BANK_REP => Entity::Bank,
         HOTEL_REP => Entity::Hotel,
-        _ => panic!("unpack_message: unknown from entity {}", buf[0]),
+        _ => return Err(format!("Unknown message from entity {}", buf[0]).into()),
     };
 
     let action = match buf[1] {
         COMMIT_REP => Action::Commit,
         PREPARE_REP => Action::Prepare,
         ABORT_REP => Action::Abort,
-        _ => panic!("unpack_message: unknown action {}", buf[1]),
+        _ => return Err(format!("Unknown action ({}) from entity {}", buf[1], buf[0]).into()),
     };
 
-    let tx = u32::from_le_bytes(
-        buf[2..6]
-            .try_into()
-            .expect("unpack_message: cannot unpack tx"),
-    );
+    let tx = u32::from_le_bytes(buf[2..6].try_into()?);
 
-    Message { from, action, tx }
-}
-
-pub fn recv_msg(socket: &UdpSocket) -> std::io::Result<(String, Message)> {
-    let mut buf = vec![0; 6];
-    let (_, src) = socket.recv_from(&mut buf)?;
-    let msg = unpack_message(&buf);
-
-    Ok((src.to_string(), msg))
+    Ok(Message { from, action, tx })
 }

@@ -16,9 +16,11 @@ pub struct Config {
 impl Config {
     pub fn new() -> BoxResult<Self> {
         let name = env::var(NAME)?;
-        let port = env::var(PORT).unwrap_or("3000".to_string()).parse()?;
+        let port = env::var(PORT)
+            .unwrap_or_else(|_| "3000".to_string())
+            .parse()?;
         let failure_rate = env::var(FAILURE_RATE)
-            .unwrap_or("0.3".to_string())
+            .unwrap_or_else(|_| "0.3".to_string())
             .parse()?;
 
         Ok(Config {

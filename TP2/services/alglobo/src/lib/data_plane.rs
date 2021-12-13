@@ -8,9 +8,11 @@ use std::{
 
 use crate::{
     config::data::Config,
-    constants::{data::WAIT_ALL_RESPONSES_TIMEOUT, errors::MUTEX_LOCK_ERROR},
+    constants::{
+        data::WAIT_ALL_RESPONSES_TIMEOUT, errors::MUTEX_LOCK_ERROR, paths::PAYMENTS_TO_PROCESS,
+    },
     protocol::data::recv_msg,
-    service::{AirlineService, BankService, HotelService},
+    service_directory::ServiceDirectory,
     types::{
         common::BoxResult,
         control::Shared,
@@ -25,42 +27,37 @@ use csv::Reader;
 pub struct DataPlane {
     payments_file: Reader<File>,
     responses: Arc<Shared<Responses>>,
-    bank_service: BankService,
-    hotel_service: HotelService,
-    airline_service: AirlineService,
     socket: UdpSocket,
     tx_log: HashMap<Tx, Action>,
+    services: ServiceDirectory,
 }
 
 impl DataPlane {
     pub fn new() -> BoxResult<Self> {
+        println!("[DEBUG] (Data) Creating Config...");
         let Config {
             port,
             hotel_addr,
             airline_addr,
             bank_addr,
-            payments_file_path,
         } = Config::new()?;
 
-        let addr = format!("0.0.0.0:{}", port);
+        println!("[DEBUG] (Data) Creating service responses...");
+        let responses = DataPlane::create_responses();
 
-        let socket = UdpSocket::bind(addr)?;
+        println!("[DEBUG] (Data) Creating CSV reader from payments to process...");
+        let payments_file = csv::Reader::from_path(PAYMENTS_TO_PROCESS)?;
 
-        let mut service_responses = HashMap::new();
-        DataPlane::populate_responses(&mut service_responses);
-
-        let responses = Arc::new(Shared::new(service_responses));
-
+        println!("[DEBUG] (Data) Creating and binding socket...");
         let ret = DataPlane {
-            responses,
-            bank_service: BankService::new(bank_addr),
-            airline_service: AirlineService::new(airline_addr),
-            hotel_service: HotelService::new(hotel_addr),
-            socket,
+            responses: Arc::new(Shared::new(responses)),
+            socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
             tx_log: HashMap::new(),
-            payments_file: csv::Reader::from_path(payments_file_path)?,
+            payments_file,
+            services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr),
         };
 
+        println!("[DEBUG] (Data) Starting Receiver...");
         let mut receiver = ret.receiver()?;
         thread::spawn(move || receiver.run());
 
@@ -96,27 +93,19 @@ impl DataPlane {
     }
 
     fn broadcast_message(&mut self, tx: Tx, action: Action) -> BoxResult<()> {
-        let res = Message {
+        let msg = Message {
             from: Entity::AlGlobo,
             action,
             tx,
         };
 
-        if let Err(err) = self.inner_broadcast_message(res) {
+        if let Err(err) = self.services.broadcast(&self.socket, msg) {
             if action != Action::Abort {
                 self.abort_tx(tx)?;
             }
 
             return Err(err);
         }
-
-        Ok(())
-    }
-
-    fn inner_broadcast_message(&mut self, res: Message) -> BoxResult<()> {
-        self.bank_service.send_message(&self.socket, &res)?;
-        self.hotel_service.send_message(&self.socket, &res)?;
-        self.airline_service.send_message(&self.socket, &res)?;
 
         Ok(())
     }
@@ -168,7 +157,7 @@ impl DataPlane {
         });
 
         println!(
-            "[tx {}] all responses received. Action: {:?} Responses: [{}] Response action: {:?}",
+            "[tx {}] All responses received. Action: {:?} Responses: [{}] Response action: {:?}",
             tx, expected_action, responses_str, response_action
         );
         Ok(response_action)
@@ -209,10 +198,14 @@ impl DataPlane {
 
     // Abstract
 
-    fn populate_responses(service_responses: &mut HashMap<Entity, Option<Action>>) {
-        service_responses.insert(Entity::Airline, None);
-        service_responses.insert(Entity::Bank, None);
-        service_responses.insert(Entity::Hotel, None);
+    fn create_responses() -> Responses {
+        let mut responses = HashMap::new();
+
+        responses.insert(Entity::Airline, None);
+        responses.insert(Entity::Bank, None);
+        responses.insert(Entity::Hotel, None);
+
+        responses
     }
 }
 

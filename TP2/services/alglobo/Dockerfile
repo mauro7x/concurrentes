@@ -1,27 +1,12 @@
-# Dockerfile to avoid re-building everytime
-# Idea from https://www.lpalmieri.com/posts/fast-rust-docker-builds/
-
-# ---
-
-# Leveraging the pre-built Docker images with 
-# cargo-chef and the Rust toolchain
-FROM lukemathwalker/cargo-chef:latest-rust-1.57.0 AS chef
+FROM rust:1.57
 WORKDIR /usr/app
 
-FROM chef AS planner
+# Weird hacky mechanism for avoiding re-build dependencies everytime
+# (Idea from: https://stackoverflow.com/questions/58473606/cache-rust-dependencies-with-docker-build)
+RUN echo "fn main() {}" > dummy.rs
+COPY dummy.Cargo.toml Cargo.toml
+RUN cargo build --release
 COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-FROM chef AS builder 
-COPY --from=planner /usr/app/recipe.json recipe.json
-# Build dependencies - this is the caching Docker layer!
-RUN cargo chef cook --release --recipe-path recipe.json
-# Build application
-COPY . .
-RUN cargo build --release --bin app
-
-# We do not need the Rust toolchain to run the binary!
-FROM debian:bullseye-slim AS runtime
-WORKDIR /usr/app
-COPY --from=builder /usr/app /usr/app
-ENTRYPOINT ["/usr/app/target/release/app"]
+RUN rm dummy.Cargo.toml dummy.rs
+RUN cargo build --release
+CMD ["target/release/app"]

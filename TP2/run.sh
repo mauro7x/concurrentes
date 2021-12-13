@@ -29,7 +29,7 @@ echo -e "${FC}=${NC}            Tomás  Nocetti            ${FC}=${NC}"
 echo -e "${FC}========================================${NC}\n"
 
 printf "> Creating services..."
-docker-compose build > /dev/null 2>&1
+docker-compose build # > /dev/null 2>&1
 echo -e " ${CHECK}\n"
 
 printf "> Removing dangling images..."

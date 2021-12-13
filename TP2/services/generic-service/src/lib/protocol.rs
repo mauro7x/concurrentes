@@ -38,7 +38,7 @@ pub fn send_msg_to(socket: &UdpSocket, msg: &Message, addr: &SocketAddr) -> BoxR
 }
 
 pub fn recv_msg(socket: &UdpSocket) -> BoxResult<(SocketAddr, Message)> {
-    let mut buf = vec![];
+    let mut buf = vec![0; 6];
     let (_, from) = socket.recv_from(&mut buf)?;
     let msg = unpack_message(&buf)?;
 
@@ -71,7 +71,7 @@ fn pack_message(msg: &Message) -> Vec<u8> {
     buf
 }
 
-fn unpack_message(buf: &Vec<u8>) -> BoxResult<Message> {
+fn unpack_message(buf: &[u8]) -> BoxResult<Message> {
     let from = match buf[0] {
         AIRLINE_REP => Entity::Airline,
         ALGLOBO_REP => Entity::AlGlobo,
