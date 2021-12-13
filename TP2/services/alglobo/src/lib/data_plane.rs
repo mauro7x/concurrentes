@@ -9,7 +9,7 @@ use std::{
 use crate::{
     config::data::Config,
     constants::{
-        data::WAIT_ALL_RESPONSES_TIMEOUT, errors::MUTEX_LOCK_ERROR, paths::PAYMENTS_TO_PROCESS,
+        data::{N_PREPARE_RETRIES, WAIT_ALL_RESPONSES_TIMEOUT}, errors::MUTEX_LOCK_ERROR, paths::PAYMENTS_TO_PROCESS,
         paths::TEMP_PAYMENTS_TO_PROCESS,
     },
     protocol::data::recv_msg,
@@ -40,7 +40,7 @@ impl DataPlane {
             port,
             hotel_addr,
             airline_addr,
-            bank_addr,
+            bank_addr
         } = Config::new()?;
 
         println!("[DEBUG] (Data) Creating service responses...");
@@ -51,7 +51,7 @@ impl DataPlane {
             responses: Arc::new(Shared::new(responses)),
             socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
             tx_log: TxLog::new()?,
-            services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr),
+            services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr)
         };
 
         println!("[DEBUG] (Data) Starting Receiver...");
@@ -116,25 +116,32 @@ impl DataPlane {
             tx,
         };
 
-        if let Err(err) = self.services.broadcast(&self.socket, msg) {
-            if action != Action::Abort {
-                self.abort_tx(tx)?;
-            }
-
-            return Err(err);
-        }
-
-        Ok(())
+        self.services.broadcast(&self.socket, msg)
     }
 
-    fn broadcast_message_and_wait(&mut self, tx: Tx, action: Action) -> BoxResult<Action> {
+    fn broadcast_until_getting_response_from_all_services(&mut self, tx: Tx, action: Action, n_retries: Option<u32>) -> BoxResult<Action> {
+        let mut n_attempts = 0;
+        let mut response: Option<Action> = None;
+
+        while response.is_none() && (n_retries.is_none() || n_attempts < n_retries.unwrap()) {
+            n_attempts += 1;
+            println!("[tx {}] broadcasting {:?} - {} attempt", tx, action, n_attempts);
+            response = self.broadcast_message_and_wait(tx, action)?;
+        }
+
+        match response {
+            Some(action) => Ok(action),
+            None => Ok(Action::Abort)
+        }
+    }
+
+    fn broadcast_message_and_wait(&mut self, tx: Tx, action: Action) -> BoxResult<Option<Action>> {
         self.reset_responses()?;
-        println!("[tx {}] broadcasting {:?}", tx, action);
         self.broadcast_message(tx, action)?;
         self.wait_all_responses(tx, action)
     }
 
-    fn wait_all_responses(&mut self, tx: Tx, expected_action: Action) -> BoxResult<Action> {
+    fn wait_all_responses(&mut self, tx: Tx, expected_action: Action) -> BoxResult<Option<Action>> {
         let res = self.responses.cv.wait_timeout_while(
             self.responses.mutex.lock().map_err(|_| MUTEX_LOCK_ERROR)?,
             WAIT_ALL_RESPONSES_TIMEOUT,
@@ -142,9 +149,10 @@ impl DataPlane {
         );
 
         match res {
-            Ok((_, timeout_result)) if timeout_result.timed_out() => Ok(Action::Abort),
-            Ok((responses_guard, _)) => self.process_result(&responses_guard, tx, expected_action),
-            Err(_) => Ok(Action::Abort),
+            Ok((_, timeout_result)) if timeout_result.timed_out() => Ok(None),
+            Ok((responses_guard, _)) =>
+                Ok(Some(self.process_result(&responses_guard, tx, expected_action)?)),
+            Err(_) => Ok(None),
         }
     }
 
@@ -163,8 +171,9 @@ impl DataPlane {
                 Some(action) if *action == expected_action => (),
                 // service responded with abort
                 Some(action) if *action == Action::Abort => response_action = Action::Abort,
-                // service did not respond
-                None => response_action = Action::Abort,
+                // should never happen that a service did not respond, since we wait
+                // in the condition variable for all responses not being None
+                None => panic!("process_result: there is a None response that should not be"),
                 // invalid case that should never occur
                 Some(action) => panic!(
           "process_result: invalid response from server: action: {:?} expected_action {:?}",
@@ -199,18 +208,18 @@ impl DataPlane {
     }
 
     fn commit_tx(&mut self, tx: Tx) -> BoxResult<Action> {
-        self.tx_log.insert(tx, Action::Commit)?;
-        self.broadcast_message_and_wait(tx, Action::Commit)
+        self.tx_log.insert(tx, Action::Commit);
+        self.broadcast_until_getting_response_from_all_services(tx, Action::Commit, None)
     }
 
     fn abort_tx(&mut self, tx: Tx) -> BoxResult<Action> {
-        self.tx_log.insert(tx, Action::Abort)?;
-        self.broadcast_message_and_wait(tx, Action::Abort)
+        self.tx_log.insert(tx, Action::Abort);
+        self.broadcast_until_getting_response_from_all_services(tx, Action::Abort, None)
     }
 
     fn prepare_tx(&mut self, tx: Tx) -> BoxResult<Action> {
-        self.tx_log.insert(tx, Action::Prepare)?;
-        self.broadcast_message_and_wait(tx, Action::Prepare)
+        self.tx_log.insert(tx, Action::Prepare);
+        self.broadcast_until_getting_response_from_all_services(tx, Action::Prepare, Some(N_PREPARE_RETRIES))
     }
 
     // Abstract
