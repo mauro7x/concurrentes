@@ -14,7 +14,7 @@ impl FileLogger {
 
     pub fn log(&mut self, tx: Tx, action: &Action) {
         self.file
-            .write(format!("[tx {}] - {:?}", tx, action).as_bytes())
+            .write_all(format!("[tx {}] - {:?}", tx, action).as_bytes())
             .expect("FileLog.log: could not write to log file");
     }
 }
