@@ -1,4 +1,4 @@
-use crate::types::{Action, Tx};
+use crate::types::data::{Action, Tx};
 use std::{fs::File, io::Write};
 
 pub struct FileLogger {

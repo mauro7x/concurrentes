@@ -1,12 +1,11 @@
 use csv::Reader;
 
-use crate::types::BoxResult;
-
 use crate::{
     config::data::Config,
     protocol::data::recv_msg,
     service::{AirlineService, BankService, HotelService},
-    types::{Action, Entity, Message, Transaction, Tx},
+    types::common::BoxResult,
+    types::data::{Action, Entity, Message, Transaction, Tx},
 };
 
 use std::fs::File;

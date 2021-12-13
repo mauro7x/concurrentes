@@ -1,4 +1,4 @@
-use crate::types::{Action, Entity, Message};
+use crate::types::data::{Action, Entity, Message};
 use std::{convert::TryInto, net::UdpSocket};
 
 // Message structure

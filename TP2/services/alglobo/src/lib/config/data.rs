@@ -1,8 +1,8 @@
 use std::env;
 
 use crate::{
-    constant::env::{AIRLINE_ADDR, BANK_ADDR, DATA_PORT, HOTEL_ADDR, PAYMENTS_CSV},
-    types::BoxResult,
+    constants::env::{AIRLINE_ADDR, BANK_ADDR, DATA_PORT, HOTEL_ADDR, PAYMENTS_CSV},
+    types::common::BoxResult,
 };
 
 // ----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 use crate::{
     control_plane::Control,
     data_plane::DataPlane,
-    types::{BoxResult, Id},
+    types::common::{BoxResult, Id},
 };
 
 // ----------------------------------------------------------------------------

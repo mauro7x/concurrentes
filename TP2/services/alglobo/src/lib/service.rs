@@ -1,7 +1,4 @@
-use crate::{
-    protocol::data::{pack_message},
-    types::{Message},
-};
+use crate::{protocol::data::pack_message, types::data::Message};
 
 use std::net::UdpSocket;
 

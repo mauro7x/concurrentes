@@ -7,9 +7,12 @@ use std::{
 };
 
 use crate::{
-    constant::directory::{CONNECTION_MAX_ATTEMPTS, CONNECTION_RETRY_TIME},
+    constants::directory::{CONNECTION_MAX_ATTEMPTS, CONNECTION_RETRY_TIME},
     protocol::directory::{RecvOpcode, ACCEPTED, DEAD, EOB, FINISHED, NEW, REGISTER, REJECTED},
-    types::{BoxResult, Id, Id2Ip, Ip2Id, Node},
+    types::{
+        common::{BoxResult, Id},
+        control::{Id2Ip, Ip2Id, Node},
+    },
 };
 
 // ----------------------------------------------------------------------------

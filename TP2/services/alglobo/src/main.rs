@@ -1,6 +1,6 @@
 use std::{thread::sleep, time::Duration};
 
-use lib::{replica::Replica, types::BoxResult};
+use lib::{replica::Replica, types::common::BoxResult};
 
 // ----------------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ pub const RESTART_TIME: Duration = Duration::from_secs(10);
 
 fn run() -> BoxResult<()> {
     let mut replica = Replica::new()?;
-    replica.run()?;
+    replica.run_iteration()?;
 
     Ok(())
 }
