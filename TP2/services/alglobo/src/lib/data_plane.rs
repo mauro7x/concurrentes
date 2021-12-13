@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{self, File},
     net::UdpSocket,
     sync::{Arc, MutexGuard},
     thread,
@@ -10,6 +10,7 @@ use crate::{
     config::data::Config,
     constants::{
         data::WAIT_ALL_RESPONSES_TIMEOUT, errors::MUTEX_LOCK_ERROR, paths::PAYMENTS_TO_PROCESS,
+        paths::TEMP_PAYMENTS_TO_PROCESS,
     },
     protocol::data::recv_msg,
     service_directory::ServiceDirectory,
@@ -25,7 +26,6 @@ use csv::Reader;
 // ----------------------------------------------------------------------------
 
 pub struct DataPlane {
-    payments_file: Reader<File>,
     responses: Arc<Shared<Responses>>,
     socket: UdpSocket,
     tx_log: HashMap<Tx, Action>,
@@ -45,15 +45,11 @@ impl DataPlane {
         println!("[DEBUG] (Data) Creating service responses...");
         let responses = DataPlane::create_responses();
 
-        println!("[DEBUG] (Data) Creating CSV reader from payments to process...");
-        let payments_file = csv::Reader::from_path(PAYMENTS_TO_PROCESS)?;
-
         println!("[DEBUG] (Data) Creating and binding socket...");
         let ret = DataPlane {
             responses: Arc::new(Shared::new(responses)),
             socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
             tx_log: HashMap::new(),
-            payments_file,
             services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr),
         };
 
@@ -64,12 +60,32 @@ impl DataPlane {
         Ok(ret)
     }
 
-    pub fn run_iteration(&mut self) -> BoxResult<()> {
-        let mut iter = self.payments_file.deserialize();
+    pub fn run_iteration(&mut self) -> BoxResult<bool> {
+        let mut payments_file = csv::Reader::from_path(PAYMENTS_TO_PROCESS)?;
+
+        let mut iter = payments_file.deserialize();
+
         if let Some(result) = iter.next() {
             let record: Transaction = result?;
             self.process_tx(&record)?;
+            self.update_payments_file(&mut payments_file)?;
+            return Ok(true);
         }
+
+        Ok(false)
+    }
+    fn update_payments_file(&mut self, payments_file: &mut Reader<File>) -> BoxResult<()> {
+        let mut wtr = csv::Writer::from_path(TEMP_PAYMENTS_TO_PROCESS)?;
+
+        wtr.write_record(payments_file.byte_headers()?)?;
+
+        payments_file
+            .byte_records()
+            .try_for_each(|el| wtr.write_byte_record(&el?))?;
+
+        wtr.flush()?;
+
+        fs::copy(TEMP_PAYMENTS_TO_PROCESS, PAYMENTS_TO_PROCESS)?; // Copy foo.txt to bar.txt
 
         Ok(())
     }

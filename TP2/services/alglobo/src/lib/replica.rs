@@ -55,9 +55,10 @@ impl Replica {
         // let mut failed_requests_logger = FileLogger::new(failed_reqs_filename);
 
         let mut data_plane = DataPlane::new()?;
+        let mut keep_working = true;
 
-        while self.control.am_i_leader()? {
-            data_plane.run_iteration()?;
+        while self.control.am_i_leader()? && keep_working {
+            keep_working = data_plane.run_iteration()?;
         }
 
         // TODO: differentiate if we leave because

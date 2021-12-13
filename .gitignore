@@ -15,3 +15,7 @@
 # Common ignores
 .vscode
 .DS_Store
+
+# Proyect specifics
+payments.csv
+temp.payments.csv
