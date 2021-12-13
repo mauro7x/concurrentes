@@ -60,7 +60,7 @@ impl DataPlane {
         Ok(ret)
     }
 
-    pub fn run_iteration(&mut self) -> BoxResult<bool> {
+    pub fn process_transaction(&mut self) -> BoxResult<bool> {
         let mut payments_file = csv::Reader::from_path(PAYMENTS_TO_PROCESS)?;
 
         let mut iter = payments_file.deserialize();
