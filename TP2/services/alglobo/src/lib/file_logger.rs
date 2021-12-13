@@ -1,5 +1,8 @@
-use crate::types::data::{Action, Tx};
 use std::{fs::File, io::Write};
+
+use crate::types::data::{Action, Tx};
+
+// ----------------------------------------------------------------------------
 
 pub struct FileLogger {
     file: File,

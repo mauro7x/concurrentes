@@ -1,8 +1,11 @@
-use crate::{protocol::data::pack_message, types::data::Message};
+use crate::{
+    protocol::data::pack_message,
+    types::data::{Address, Message},
+};
 
 use std::net::UdpSocket;
 
-pub type Address = String;
+// ----------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub struct BankService {
@@ -14,20 +17,19 @@ impl BankService {
         println!("[INFO] Creo servicio de Banco address: '{:?}'", address);
         BankService { address }
     }
-    pub fn send_message(
-        &mut self,
-        socket: &mut UdpSocket,
-        msg: &Message,
-    ) -> std::io::Result<usize> {
+
+    pub fn send_message(&mut self, socket: &UdpSocket, msg: &Message) -> std::io::Result<usize> {
         println!(
             "[INFO] Enviando mensaje '{:?}' para Bank Service!",
             msg.action
         );
-        let mut buf: Vec<u8> = Vec::new();
-        pack_message(msg, &mut buf);
+
+        let buf = pack_message(msg);
         socket.send_to(&buf, &self.address)
     }
 }
+
+// ----------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub struct GenericService {
@@ -38,14 +40,11 @@ impl GenericService {
     pub fn new(address: Address) -> Self {
         HotelService { address }
     }
-    pub fn send_message(
-        &mut self,
-        socket: &mut UdpSocket,
-        msg: &Message,
-    ) -> std::io::Result<usize> {
-        println!("[INFO] Enviando mensaje para Hotel Service");
-        let mut buf: Vec<u8> = Vec::new();
-        pack_message(msg, &mut buf);
+
+    pub fn send_message(&mut self, socket: &UdpSocket, msg: &Message) -> std::io::Result<usize> {
+        println!("[INFO] Enviando mensaje para Generic Service");
+
+        let buf = pack_message(msg);
         socket.send_to(&buf, &self.address)
     }
 }

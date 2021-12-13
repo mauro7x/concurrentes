@@ -7,6 +7,7 @@ services:
         environment:
             - PORT=${DIRECTORY_PORT}
             - MAX_NODES=${MAX_NODES}
+
     alglobo:
         build: ./services/alglobo
         image: tp2_alglobo
@@ -26,6 +27,7 @@ services:
             - BANK_ADDR=bank:4000
             - HOTEL_ADDR=hotel:4000
             - PAYMENTS_CSV=${PAYMENTS_CSV}
+
     airline:
         build: ./services/generic-service
         image: tp2_generic_service

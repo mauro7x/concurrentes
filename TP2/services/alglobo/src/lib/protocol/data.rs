@@ -1,12 +1,14 @@
-use crate::types::data::{Action, Entity, Message};
 use std::{convert::TryInto, net::UdpSocket};
+
+use crate::types::data::{Action, Entity, Message};
+
+// ----------------------------------------------------------------------------
 
 // Message structure
 //
 // | --- 1 byte --- | --- 1 byte --- | -- 4 bytes -- |
 // |   FROM_ENTITY  |     ACTION     |   TX_NUMBER   |
 // | ---------------|----------------|---------------|
-//
 
 // FROM_ENTITIES
 const AIRLINE_REP: u8 = b'A';
@@ -19,14 +21,17 @@ const COMMIT_REP: u8 = b'E';
 const PREPARE_REP: u8 = b'F';
 const ABORT_REP: u8 = b'G';
 
-pub fn pack_message(msg: &Message, buf: &mut Vec<u8>) {
+// ----------------------------------------------------------------------------
+
+pub fn pack_message(msg: &Message) -> Vec<u8> {
+    let mut buf = vec![];
+
     let from_rep = match &msg.from {
         Entity::Airline => AIRLINE_REP,
         Entity::AlGlobo => ALGLOBO_REP,
         Entity::Bank => BANK_REP,
         Entity::Hotel => HOTEL_REP,
     };
-
     buf.push(from_rep);
 
     let action_rep = match &msg.action {
@@ -34,13 +39,14 @@ pub fn pack_message(msg: &Message, buf: &mut Vec<u8>) {
         Action::Commit => COMMIT_REP,
         Action::Abort => ABORT_REP,
     };
-
     buf.push(action_rep);
 
     buf.append(&mut msg.tx.to_le_bytes().to_vec());
+
+    buf
 }
 
-fn unpack_message(buf: &Vec<u8>) -> Message {
+fn unpack_message(buf: &[u8]) -> Message {
     let from = match buf[0] {
         AIRLINE_REP => Entity::Airline,
         ALGLOBO_REP => Entity::AlGlobo,
@@ -65,9 +71,10 @@ fn unpack_message(buf: &Vec<u8>) -> Message {
     Message { from, action, tx }
 }
 
-pub fn recv_msg(socket: &mut UdpSocket) -> std::io::Result<(String, Message)> {
+pub fn recv_msg(socket: &UdpSocket) -> std::io::Result<(String, Message)> {
     let mut buf = vec![0; 6];
     let (_, src) = socket.recv_from(&mut buf)?;
     let msg = unpack_message(&buf);
+
     Ok((src.to_string(), msg))
 }

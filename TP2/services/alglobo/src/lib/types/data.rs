@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+
 use serde::Deserialize;
+
+// ----------------------------------------------------------------------------
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Action {
@@ -32,3 +36,7 @@ pub struct Transaction {
 }
 
 pub type Tx = u32;
+
+pub type Address = String;
+
+pub type Responses = HashMap<Entity, Option<Action>>;

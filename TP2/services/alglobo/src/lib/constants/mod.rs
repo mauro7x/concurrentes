@@ -1,3 +1,4 @@
+pub mod data;
 pub mod directory;
 pub mod env;
 pub mod errors;
