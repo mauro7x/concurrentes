@@ -1,15 +1,16 @@
 #!/bin/bash
 
+# Exit when any command fails
+set -e
+
 # Navigate to services
-SERVICES_DIR=../services
-SERVICES="${SERVICES_DIR}/*"
+cd services
 
 # Run $1 command for each service
-cd ${SERVICES_DIR}
-for service_dir in ${SERVICES}; do
+for service_dir in ./*; do
     service="$(basename "$service_dir")"
     echo "Running for ${service}..."
-    cd ${service} &&
+    cd "${service}" &&
     $($1) &&
     cd ..
 done

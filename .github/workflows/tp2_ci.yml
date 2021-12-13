@@ -19,12 +19,12 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./TP2/ci
+        working-directory: ./TP2
     steps:
       - uses: actions/checkout@v2
 
       - name: Run check
-        run: ./run_for_services.sh "cargo check --verbose"
+        run: ./check.sh
 
       - name: Run clippy
-        run: ./run_for_services.sh "cargo clippy --verbose -- -D warnings"
+        run: ./clippy.sh
