@@ -7,10 +7,11 @@ services:
         environment:
             - PORT=${DIRECTORY_PORT}
             - MAX_NODES=${MAX_NODES}
-
     alglobo:
         build: ./services/alglobo
         image: tp2_alglobo
+        volumes:
+            - ./assets:/usr/app/assets
         depends_on:
             - directory
             - airline
@@ -21,6 +22,10 @@ services:
             - DATA_PORT=${ALGLOBO_DATA_PORT}
             - DIRECTORY_HOST=directory
             - DIRECTORY_PORT=${DIRECTORY_PORT}
+            - AIRLINE_ADDR=airline:4000
+            - BANK_ADDR=bank:4000
+            - HOTEL_ADDR=hotel:4000
+            - PAYMENTS_CSV=${PAYMENTS_CSV}
     airline:
         build: ./services/generic-service
         image: tp2_generic_service

@@ -3,6 +3,10 @@ pub mod constant;
 pub mod replica;
 pub mod types;
 
+// Data
+pub mod file_logger;
+pub mod service;
+
 // Private
 mod config;
 mod control_plane;

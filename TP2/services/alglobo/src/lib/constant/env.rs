@@ -5,4 +5,7 @@ pub const DIRECTORY_HOST: &str = "DIRECTORY_HOST";
 pub const DIRECTORY_PORT: &str = "DIRECTORY_PORT";
 
 // Data plane
-// Coming soon
+pub const AIRLINE_ADDR: &str = "AIRLINE_ADDR";
+pub const BANK_ADDR: &str = "BANK_ADDR";
+pub const HOTEL_ADDR: &str = "HOTEL_ADDR";
+pub const PAYMENTS_CSV: &str = "PAYMENTS_CSV";

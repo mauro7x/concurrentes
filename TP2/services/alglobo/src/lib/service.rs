@@ -1,6 +1,5 @@
 use crate::{
-    constants,
-    protocol::{pack_message, recv_msg},
+    protocol::data::{pack_message, recv_msg},
     types::{Message, Tx},
 };
 
@@ -15,6 +14,7 @@ pub struct BankService {
 
 impl BankService {
     pub fn new(address: Address) -> Self {
+        println!("[INFO] Creo servicio de Banco address: '{:?}'", address);
         BankService { address }
     }
     pub fn send_message(

@@ -38,6 +38,7 @@ impl Replica {
         loop {
             if self.control.am_i_leader()? {
                 self.run_as_leader()?;
+                break;
                 // TODO: detect when there
                 // is not more work to do
                 // and finish gracefully
@@ -47,13 +48,16 @@ impl Replica {
         }
 
         // TEMP:
-        // Ok(())
+        Ok(())
     }
 
     fn run_as_leader(&self) -> BoxResult<()> {
-        let data_plane = DataPlane::new()?;
+        // let mut failed_requests_logger = FileLogger::new(failed_reqs_filename);
+
+        let mut data_plane = DataPlane::new()?;
+
         while self.control.am_i_leader()? {
-            data_plane.run_iteration()?;
+            data_plane.run()?;
         }
 
         // TODO: differentiate if we leave because
