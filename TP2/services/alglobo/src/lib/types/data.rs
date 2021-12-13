@@ -30,9 +30,8 @@ pub struct Message {
 pub struct Transaction {
     pub id: u32,
     pub cbu: u32,
-    pub bank_total: u32,
-    pub airline_total: u32,
-    pub hotel_total: u32,
+    pub airline_cost: u32,
+    pub hotel_cost: u32,
 }
 
 pub type Tx = u32;
