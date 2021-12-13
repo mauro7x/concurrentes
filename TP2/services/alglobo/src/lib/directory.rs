@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     constants::directory::{CONNECTION_MAX_ATTEMPTS, CONNECTION_RETRY_TIME},
-    protocol::directory::{RecvOpcode, ACCEPTED, DEAD, EOB, FINISHED, NEW, REGISTER, REJECTED},
+    protocol::directory::{Opcode, ACCEPTED, DEAD, EOB, FINISHED, NEW, REGISTER, REJECTED},
     types::{
         common::{BoxResult, Id},
         control::{Id2Ip, Ip2Id, Node},
@@ -53,7 +53,7 @@ impl Directory {
     }
 
     pub fn update(&mut self) -> BoxResult<()> {
-        let mut opcode: RecvOpcode = [0; 1];
+        let mut opcode: Opcode = [0; 1];
 
         match self.stream.read_exact(&mut opcode) {
             Ok(_) => {
@@ -82,7 +82,7 @@ impl Directory {
 
     // Private
 
-    fn inner_update(&mut self, opcode: RecvOpcode, id: Id, ip: Ipv4Addr) -> BoxResult<()> {
+    fn inner_update(&mut self, opcode: Opcode, id: Id, ip: Ipv4Addr) -> BoxResult<()> {
         match opcode {
             NEW => {
                 if let Some(old_id) = self.ip2id.insert(ip, id) {

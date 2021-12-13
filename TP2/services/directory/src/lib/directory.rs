@@ -10,11 +10,9 @@ use crate::{
     config::Config,
     constants::POLLING_SLEEP_TIME,
     node::Node,
-    protocol::{
-        encode, msg_from, RecvOpcode, ACCEPTED, DEAD, EOB, FINISHED, NEW, PING, REGISTER, REJECTED,
-    },
+    protocol::{Opcode, ACCEPTED, DEAD, EOB, FINISHED, NEW, PING, REGISTER, REJECTED},
     types::*,
-    utils::next,
+    utils::{encode, msg_from, next},
 };
 
 // ----------------------------------------------------------------------------
@@ -77,7 +75,7 @@ impl Directory {
         let (mut stream, addr) = connection;
         let ip = Directory::addr2ipv4(addr)?;
 
-        let mut buf: RecvOpcode = [0; 1];
+        let mut buf: Opcode = [0; 1];
         if let Err(err) = stream.read_exact(&mut buf) {
             println!(
                 "[WARN] Error ({}) while reading from {}, aborting connection",

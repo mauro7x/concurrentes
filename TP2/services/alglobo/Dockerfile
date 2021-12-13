@@ -9,6 +9,7 @@ RUN cargo build --release
 RUN rm dummy.rs
 
 COPY . .
+COPY ./shared/alglobo_directory_protocol.rs ./src/lib/protocol/directory.rs
 COPY ./shared/alglobo_generic-service_protocol.rs ./src/lib/protocol/data.rs
 RUN cargo build --release
 CMD ["target/release/app"]
