@@ -39,6 +39,9 @@ printf "> Removing dangling images..."
 docker image prune -f > /dev/null 2>&1
 echo -e " ${CHECK}\n"
 
+echo -e "${CYANB}> Copying necessary dependencies...${NC}"
+cp ./assets/payments.example.csv ./assets/payments.csv
+
 echo -e "${CYANB}> Running with ${REPLICAS} replicas...${NC}"
 docker-compose up --scale alglobo=$REPLICAS
 
