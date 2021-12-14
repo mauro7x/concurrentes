@@ -1,6 +1,10 @@
 use std::{
+    io::ErrorKind,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket},
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{
+        atomic::{AtomicBool, Ordering::Relaxed},
+        Arc, Mutex, MutexGuard,
+    },
     thread,
 };
 
@@ -8,6 +12,7 @@ use crate::{
     config::control::Config,
     constants::{
         errors::{CV_WAIT_ERROR, MUTEX_LOCK_ERROR},
+        general::NONBLOCKING_POLLING_RATE,
         leader_election::{
             ELECTION_TIMEOUT, GET_LEADER_TIMEOUT, HEALTHCHECK_RETRIES, HEALTHCHECK_TIMEOUT,
             REPLICA_SLEEP_TIME,
@@ -32,6 +37,7 @@ pub struct ControlPlane {
     leader_id: Arc<Shared<Option<Id>>>,
     got_ok: Arc<Shared<bool>>,
     threads: Vec<SafeThread>,
+    stopped: Arc<AtomicBool>,
 }
 
 impl ControlPlane {
@@ -50,14 +56,18 @@ impl ControlPlane {
             "[DEBUG] (ID: {}) (Control) Creating and binding socket...",
             id
         );
+        let socket = UdpSocket::bind(format!("0.0.0.0:{}", port))?;
+        socket.set_nonblocking(true)?;
+
         let mut ret = Self {
             port,
             id,
-            socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
+            socket,
             directory: Arc::new(Mutex::new(directory)),
             leader_id: Arc::new(Shared::new(None)),
             got_ok: Arc::new(Shared::new(false)),
             threads: Vec::new(),
+            stopped: Arc::new(AtomicBool::new(false)),
         };
 
         ret.init_leader()?;
@@ -129,6 +139,7 @@ impl ControlPlane {
             leader_id: self.leader_id.clone(),
             got_ok: self.got_ok.clone(),
             threads: Vec::new(),
+            stopped: self.stopped.clone(),
         };
 
         Ok(ret)
@@ -148,6 +159,7 @@ impl ControlPlane {
         {
             let msg = self.msg_with_id(GET_LEADER);
             let mut directory = self.directory()?;
+
             let nodes = directory.get_updated_nodes()?;
             if nodes.is_empty() {
                 // I am the only node in the network,
@@ -352,21 +364,34 @@ impl ControlPlane {
     // Receiver and handlers
 
     fn receiver(&mut self) -> BoxResult<()> {
+        while !self.stopped.load(Relaxed) {
+            self.recv_msg()?;
+        }
+
+        Ok(())
+    }
+
+    fn recv_msg(&mut self) -> BoxResult<()> {
         let mut message: Message = NEW_MESSAGE;
 
-        loop {
-            let (_size, from) = self.socket.recv_from(&mut message)?;
-
-            match message {
-                [PING, _] => self.handle_ping(from)?,
+        match self.socket.recv_from(&mut message) {
+            Ok((_size, from)) => match message {
+                [PING, _] => self.handle_ping(from),
                 [opcode, id] => match opcode {
-                    OK => self.handle_ok(from, id)?,
-                    ELECTION => self.handle_election(from, id)?,
-                    LEADER => self.handle_leader(from, id)?,
-                    GET_LEADER => self.handle_get_leader(from, id)?,
-                    _ => self.handle_invalid(from, id)?,
+                    OK => self.handle_ok(from, id),
+                    ELECTION => self.handle_election(from, id),
+                    LEADER => self.handle_leader(from, id),
+                    GET_LEADER => self.handle_get_leader(from, id),
+                    _ => self.handle_invalid(from, id),
                 },
-            };
+            },
+            Err(err) => match err.kind() {
+                ErrorKind::WouldBlock => {
+                    thread::sleep(NONBLOCKING_POLLING_RATE);
+                    Ok(())
+                }
+                _ => Err(err.into()),
+            },
         }
     }
 
@@ -437,5 +462,16 @@ impl ControlPlane {
         );
 
         Ok(())
+    }
+}
+
+impl Drop for ControlPlane {
+    fn drop(&mut self) {
+        println!("[DEBUG] (ID: {}) (Control) Destroying...", self.id);
+        self.stopped.store(true, Relaxed);
+        while let Some(thread) = self.threads.pop() {
+            thread.joiner.join().expect("Error joining threads");
+        }
+        println!("[DEBUG] (ID: {}) (Control) Destroyed successfully", self.id);
     }
 }
