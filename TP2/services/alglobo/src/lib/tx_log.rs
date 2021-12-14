@@ -1,12 +1,12 @@
 use std::{
     collections::HashMap,
     fs::{File, OpenOptions},
-    io::{Seek, Write},
+    io::{BufRead, BufReader, Seek, Write},
 };
 
 use crate::{
     constants::paths::LAST_PAYMENT_STATE,
-    protocol::data::cast_action,
+    protocol::data::{cast_action_to_char, cast_char_to_action},
     types::{
         common::BoxResult,
         data::{Action, Tx},
@@ -36,14 +36,53 @@ impl TxLog {
         self.in_memory_log.insert(tx, action);
         Ok(())
     }
-    pub fn get(&mut self, tx: &Tx) -> Option<&Action> {
-        self.in_memory_log.get(tx)
+    pub fn get(&mut self, tx: &Tx) -> BoxResult<Option<Action>> {
+        let res = self.in_memory_log.get(tx);
+
+        match res {
+            None => {
+                if let Some((logged_tx, logged_action)) = self.read_log()? {
+                    if logged_tx == *tx {
+                        println!(
+                            "[INFO] State recovered from file! Congrats, it works \n
+                        Transaction: {}, Action: {:?}",
+                            logged_tx, logged_action
+                        );
+                        return Ok(Some(logged_action));
+                    }
+                };
+                Ok(None)
+            }
+            Some(val) => Ok(Some(*val)),
+        }
     }
 
-    fn write_log(&mut self, tx: &Tx, action: Action) -> std::io::Result<()> {
+    fn write_log(&mut self, tx: &Tx, action: Action) -> BoxResult<()> {
         self.file.rewind()?;
+        let action_byte = &[cast_action_to_char(&action)];
+        let action = std::str::from_utf8(action_byte)?;
 
         self.file
-            .write_all(format!("{}-{}", tx, cast_action(&action)).as_bytes())
+            .write_all(format!("{}{}\n", tx, action).as_bytes())?;
+        Ok(())
+    }
+
+    fn read_log(&mut self) -> BoxResult<Option<(Tx, Action)>> {
+        self.file.rewind()?;
+        let reader = BufReader::new(&self.file);
+
+        if let Some(line) = reader.lines().next() {
+            let mut char_vec: Vec<char> = line?.chars().collect();
+
+            if let Some(action) = char_vec.pop() {
+                let s: String = char_vec.into_iter().collect();
+
+                let id = s.parse::<u32>()?;
+
+                return Ok(Some((id, cast_char_to_action(action as u8)?)));
+            }
+        }
+
+        Ok(None)
     }
 }

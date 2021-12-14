@@ -32,11 +32,20 @@ const ABORT_REP: u8 = b'G';
 // ----------------------------------------------------------------------------
 // Public
 
-pub fn cast_action(action: &Action) -> u8 {
+pub fn cast_action_to_char(action: &Action) -> u8 {
     match action {
         Action::Prepare => PREPARE_REP,
         Action::Commit => COMMIT_REP,
         Action::Abort => ABORT_REP,
+    }
+}
+
+pub fn cast_char_to_action(char: u8) -> BoxResult<Action> {
+    match char {
+        COMMIT_REP => Ok(Action::Commit),
+        PREPARE_REP => Ok(Action::Prepare),
+        ABORT_REP => Ok(Action::Abort),
+        _ => Err(format!("Unknown action ({})", char).into()),
     }
 }
 
@@ -70,7 +79,7 @@ fn pack_message(msg: &Message) -> Vec<u8> {
 
     buf.push(from_rep);
 
-    let action_rep = cast_action(&msg.action);
+    let action_rep = cast_action_to_char(&msg.action);
     buf.push(action_rep);
 
     buf.append(&mut msg.tx.id.to_le_bytes().to_vec());
@@ -90,12 +99,7 @@ fn unpack_message(buf: &[u8]) -> BoxResult<Message> {
         _ => return Err(format!("Unknown message from entity {}", buf[0]).into()),
     };
 
-    let action = match buf[1] {
-        COMMIT_REP => Action::Commit,
-        PREPARE_REP => Action::Prepare,
-        ABORT_REP => Action::Abort,
-        _ => return Err(format!("Unknown action ({}) from entity {}", buf[1], buf[0]).into()),
-    };
+    let action = cast_char_to_action(buf[1])?;
 
     let tx = Transaction {
         id: u32::from_le_bytes(buf[2..6].try_into()?),
