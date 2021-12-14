@@ -50,8 +50,7 @@ impl TxLog {
                 if let Some((logged_tx, logged_action)) = self.read_log()? {
                     if logged_tx == *tx {
                         info!(
-                            "State recovered from file! Congrats, it works \n
-                        Transaction: {}, Action: {:?}",
+                            "State recovered from file. Transaction: {}, Action: {:?}",
                             logged_tx, logged_action
                         );
                         return Ok(Some(logged_action));
