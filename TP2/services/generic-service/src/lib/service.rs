@@ -84,7 +84,7 @@ impl Service {
             // Valid action flows
             (None, Action::Prepare) => self.prepare_tx(&from, &req),
             (Some(Action::Prepare), Action::Commit) => self.commit_tx(&from, &req),
-            (Some(Action::Prepare), Action::Abort) => self.abort_tx(&from, &req),
+            (Some(Action::Prepare), Action::Abort) => self.abort_tx(&from, &req, true),
 
             // Action has been already processed
             (Some(logged_action), req_action) if (*logged_action == req_action) => {
@@ -171,7 +171,7 @@ impl Service {
 
     fn prepare_tx(&mut self, addr: &SocketAddr, req: &Message) -> BoxResult<()> {
         if self.should_reject_new_tx() {
-            return self.abort_tx(addr, req);
+            return self.abort_tx(addr, req, false);
         }
 
         let action_taken = match self.name {
@@ -202,8 +202,8 @@ impl Service {
         Ok(())
     }
 
-    fn abort_tx(&mut self, addr: &SocketAddr, req: &Message) -> BoxResult<()> {
-        if self.name == Entity::Bank {
+    fn abort_tx(&mut self, addr: &SocketAddr, req: &Message, release: bool) -> BoxResult<()> {
+        if release && self.name == Entity::Bank {
             self.bank
                 .as_mut()
                 .ok_or("prepare_tx: bank has not been initialized")?
