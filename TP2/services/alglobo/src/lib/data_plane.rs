@@ -64,7 +64,6 @@ impl DataPlane {
     }
 
     pub fn process_transaction(&mut self) -> BoxResult<bool> {
-        println!("payments_file: {}", PAYMENTS_TO_PROCESS);
         let mut payments_file = csv::Reader::from_path(PAYMENTS_TO_PROCESS)?;
 
         let mut iter = payments_file.deserialize();
@@ -124,7 +123,7 @@ impl DataPlane {
 
     fn broadcast_until_getting_response_from_all_services(
         &mut self,
-        tx: Tx,
+        tx: &Transaction,
         action: Action,
         n_retries: Option<u32>,
     ) -> BoxResult<Action> {
@@ -135,7 +134,7 @@ impl DataPlane {
             n_attempts += 1;
             println!(
                 "[tx {}] broadcasting {:?} - {} attempt",
-                tx, action, n_attempts
+                tx.id, action, n_attempts
             );
             response = self.broadcast_message_and_wait(tx, action)?;
         }
@@ -205,8 +204,8 @@ impl DataPlane {
 
     fn process_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
         match self.tx_log.get(&tx.id)? {
-            Some(Action::Commit) => self.commit_tx(tx.id),
-            Some(Action::Abort) => self.abort_tx(tx.id),
+            Some(Action::Commit) => self.commit_tx(tx),
+            Some(Action::Abort) => self.abort_tx(tx),
             Some(Action::Prepare) | None => {
                 match self.prepare_tx(tx)? {
                     Action::Prepare => self.commit_tx(tx),
@@ -230,8 +229,8 @@ impl DataPlane {
         self.broadcast_until_getting_response_from_all_services(tx, Action::Abort, None)
     }
 
-    fn prepare_tx(&mut self, tx: Tx) -> BoxResult<Action> {
-        self.tx_log.insert(tx, Action::Prepare)?;
+    fn prepare_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
+        self.tx_log.insert(tx.id, Action::Prepare)?;
         self.broadcast_until_getting_response_from_all_services(
             tx,
             Action::Prepare,
