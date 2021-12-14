@@ -15,7 +15,7 @@ use crate::{
     },
     protocol::data::recv_msg,
     service_directory::ServiceDirectory,
-    thread_utils::safe_spawn,
+    thread_utils::{check_threads, safe_spawn},
     tx_log::TxLog,
     types::{
         common::BoxResult,
@@ -84,6 +84,7 @@ impl DataPlane {
 
         Ok(false)
     }
+
     fn update_payments_file(&mut self, payments_file: &mut Reader<File>) -> BoxResult<()> {
         let mut wtr = csv::Writer::from_path(TEMP_PAYMENTS_TO_PROCESS)?;
 
@@ -153,6 +154,7 @@ impl DataPlane {
     }
 
     fn broadcast_message_and_wait(&mut self, tx: Tx, action: Action) -> BoxResult<Option<Action>> {
+        check_threads(&mut self.threads)?;
         self.reset_responses()?;
         self.broadcast_message(tx, action)?;
         self.wait_all_responses(tx, action)
@@ -210,6 +212,8 @@ impl DataPlane {
     }
 
     fn process_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
+        check_threads(&mut self.threads)?;
+
         // TODO: ESTADO COMPARTIDO
         match self.tx_log.get(&tx.id) {
             Some(Action::Commit) => self.commit_tx(tx.id),
