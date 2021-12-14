@@ -1,3 +1,5 @@
+use std::{collections::HashMap, convert::TryInto};
+
 use crate::{
     paths::BANK_ACCOUNTS,
     types::{
@@ -5,8 +7,11 @@ use crate::{
         data::{Action, Transaction},
     },
 };
+
+use log::{debug, warn};
 use serde::Deserialize;
-use std::{collections::HashMap, convert::TryInto};
+
+// ----------------------------------------------------------------------------
 
 type Account = u32;
 
@@ -15,6 +20,8 @@ struct AccountRecord {
     cbu: Account,
     money: i32,
 }
+
+// ----------------------------------------------------------------------------
 
 pub struct Bank {
     accounts_money: HashMap<Account, i32>,
@@ -47,8 +54,8 @@ impl Bank {
         let required_money = (tx.airline_cost + tx.hotel_cost).try_into()?;
 
         if *account_money < required_money {
-            println!(
-                "[tx {}] insufficient money => bank loan - required: {} available: {}",
+            warn!(
+                "[tx {}] Insufficient money => bank loan - required: {} available: {}",
                 tx.id, required_money, *account_money
             );
             // WONTDO: Reject transaction [we must add another message]
@@ -56,8 +63,8 @@ impl Bank {
         }
 
         let account_left_money = *account_money - required_money;
-        println!(
-            "[tx {}] taking {} from cbu {} - money left: {}",
+        debug!(
+            "[tx {}] Taking {} from cbu {} - money left: {}",
             tx.id, required_money, tx.cbu, account_left_money
         );
 
@@ -68,15 +75,15 @@ impl Bank {
 
     pub fn release_resources(&mut self, tx: &Transaction) -> BoxResult<()> {
         let account_money = self.accounts_money.get_mut(&tx.cbu).ok_or(format!(
-            "[tx {}] ERROR: account with cbu {} should have been created",
+            "[tx {}] Account with cbu {} should have been created",
             tx.id, tx.cbu
         ))?;
 
         // restore money to account (it should have been reserved -substracted-)
         let money_to_release: i32 = (tx.airline_cost + tx.hotel_cost).try_into()?;
         *account_money += money_to_release;
-        println!(
-            "[tx {}] releasing {} to cbu {} - money available: {}",
+        debug!(
+            "[tx {}] Releasing {} to cbu {} - money available: {}",
             tx.id, money_to_release, tx.cbu, account_money
         );
 
@@ -85,8 +92,8 @@ impl Bank {
 
     pub fn consume_resources(&mut self, tx: &Transaction) -> BoxResult<()> {
         // do nothing, since resources were already substracted from account
-        println!(
-            "[tx {}] confirming extraction of {} from cbu {}",
+        debug!(
+            "[tx {}] Confirming extraction of {} from cbu {}",
             tx.id,
             tx.airline_cost + tx.hotel_cost,
             tx.cbu
