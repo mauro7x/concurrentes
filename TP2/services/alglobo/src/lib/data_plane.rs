@@ -3,21 +3,23 @@ use std::{
     fs::{self, File},
     net::UdpSocket,
     sync::{Arc, MutexGuard},
-    thread,
 };
 
 use crate::{
     config::data::Config,
     constants::{
-        data::{N_PREPARE_RETRIES, WAIT_ALL_RESPONSES_TIMEOUT}, errors::MUTEX_LOCK_ERROR, paths::PAYMENTS_TO_PROCESS,
+        data::{N_PREPARE_RETRIES, WAIT_ALL_RESPONSES_TIMEOUT},
+        errors::MUTEX_LOCK_ERROR,
+        paths::PAYMENTS_TO_PROCESS,
         paths::TEMP_PAYMENTS_TO_PROCESS,
     },
     protocol::data::recv_msg,
     service_directory::ServiceDirectory,
+    thread_utils::safe_spawn,
     tx_log::TxLog,
     types::{
         common::BoxResult,
-        control::Shared,
+        control::{SafeThread, Shared},
         data::{Action, Entity, Message, Responses, Transaction, Tx},
     },
 };
@@ -31,6 +33,7 @@ pub struct DataPlane {
     socket: UdpSocket,
     tx_log: TxLog,
     services: ServiceDirectory,
+    threads: Vec<SafeThread>,
 }
 
 impl DataPlane {
@@ -40,23 +43,29 @@ impl DataPlane {
             port,
             hotel_addr,
             airline_addr,
-            bank_addr
+            bank_addr,
         } = Config::new()?;
 
         println!("[DEBUG] (Data) Creating service responses...");
         let responses = DataPlane::create_responses();
 
         println!("[DEBUG] (Data) Creating and binding socket...");
-        let ret = DataPlane {
+        let mut ret = DataPlane {
             responses: Arc::new(Shared::new(responses)),
             socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
             tx_log: TxLog::new()?,
-            services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr)
+            services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr),
+            threads: Vec::new(),
         };
 
         println!("[DEBUG] (Data) Starting Receiver...");
-        let mut receiver = ret.receiver()?;
-        thread::spawn(move || receiver.run());
+        let receiver = ret.receiver()?;
+        safe_spawn(
+            receiver,
+            DataPlaneReceiver::process_responses,
+            &mut ret.threads,
+        )?;
+        // thread::spawn(move || receiver.run());
 
         Ok(ret)
     }
@@ -119,19 +128,27 @@ impl DataPlane {
         self.services.broadcast(&self.socket, msg)
     }
 
-    fn broadcast_until_getting_response_from_all_services(&mut self, tx: Tx, action: Action, n_retries: Option<u32>) -> BoxResult<Action> {
+    fn broadcast_until_getting_response_from_all_services(
+        &mut self,
+        tx: Tx,
+        action: Action,
+        n_retries: Option<u32>,
+    ) -> BoxResult<Action> {
         let mut n_attempts = 0;
         let mut response: Option<Action> = None;
 
         while response.is_none() && (n_retries.is_none() || n_attempts < n_retries.unwrap()) {
             n_attempts += 1;
-            println!("[tx {}] broadcasting {:?} - {} attempt", tx, action, n_attempts);
+            println!(
+                "[tx {}] broadcasting {:?} - {} attempt",
+                tx, action, n_attempts
+            );
             response = self.broadcast_message_and_wait(tx, action)?;
         }
 
         match response {
             Some(action) => Ok(action),
-            None => Ok(Action::Abort)
+            None => Ok(Action::Abort),
         }
     }
 
@@ -150,8 +167,11 @@ impl DataPlane {
 
         match res {
             Ok((_, timeout_result)) if timeout_result.timed_out() => Ok(None),
-            Ok((responses_guard, _)) =>
-                Ok(Some(self.process_result(&responses_guard, tx, expected_action)?)),
+            Ok((responses_guard, _)) => Ok(Some(self.process_result(
+                &responses_guard,
+                tx,
+                expected_action,
+            )?)),
             Err(_) => Ok(None),
         }
     }
@@ -219,7 +239,11 @@ impl DataPlane {
 
     fn prepare_tx(&mut self, tx: Tx) -> BoxResult<Action> {
         self.tx_log.insert(tx, Action::Prepare)?;
-        self.broadcast_until_getting_response_from_all_services(tx, Action::Prepare, Some(N_PREPARE_RETRIES))
+        self.broadcast_until_getting_response_from_all_services(
+            tx,
+            Action::Prepare,
+            Some(N_PREPARE_RETRIES),
+        )
     }
 
     // Abstract
@@ -243,13 +267,6 @@ struct DataPlaneReceiver {
 }
 
 impl DataPlaneReceiver {
-    fn run(&mut self) {
-        if let Err(err) = self.process_responses() {
-            // TODO: Avoid this panic, propagate!
-            panic!("[ERROR] (Data) Crashed: {}", err)
-        };
-    }
-
     fn process_responses(&mut self) -> BoxResult<()> {
         loop {
             let res = match recv_msg(&self.socket) {
