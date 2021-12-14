@@ -4,6 +4,8 @@ services:
   directory:
     build: ./services/directory
     image: tp2_directory
+    # logging:
+    #   driver: none
     env_file:
       - ./config/directory.env
     environment:
@@ -11,10 +13,11 @@ services:
     networks:
       - internal
 
-
   alglobo:
     build: ./services/alglobo
     image: tp2_alglobo
+    # logging:
+    #   driver: none
     env_file:
       - ./config/alglobo.env
     environment:
@@ -36,6 +39,8 @@ services:
   airline:
     build: ./services/generic-service
     image: tp2_generic_service
+    # logging:
+    #   driver: none
     env_file:
       - ./config/airline.env
     environment:
@@ -46,6 +51,8 @@ services:
   bank:
     build: ./services/generic-service
     image: tp2_generic_service
+    # logging:
+    #   driver: none
     env_file:
       - ./config/bank.env
     environment:
@@ -58,6 +65,8 @@ services:
   hotel:
     build: ./services/generic-service
     image: tp2_generic_service
+    # logging:
+    #   driver: none
     env_file:
       - ./config/hotel.env
     environment:
@@ -66,11 +75,9 @@ services:
       - external
 
 networks:
-  
   internal:
     driver: bridge
 
   external:
     driver: bridge
     attachable: true
-  
