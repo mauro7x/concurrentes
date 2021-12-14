@@ -23,10 +23,10 @@ pub enum Entity {
 pub struct Message {
     pub from: Entity,
     pub action: Action,
-    pub tx: u32,
+    pub tx: Transaction,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Copy, Clone, Debug, Deserialize)]
 pub struct Transaction {
     pub id: u32,
     pub cbu: u32,

@@ -11,7 +11,7 @@ use crate::{
     protocol::{recv_msg, send_msg_to},
     types::{
         common::BoxResult,
-        data::{Action, Entity, Message, Tx},
+        data::{Action, Entity, Message, Transaction, Tx},
     },
 };
 
@@ -65,7 +65,7 @@ impl Service {
 
     pub fn process_tx(&mut self) -> BoxResult<()> {
         let (from, req) = recv_msg(&self.socket)?;
-        let logged_action = self.tx_log.get(&req.tx);
+        let logged_action = self.tx_log.get(&req.tx.id);
 
         match (logged_action, req.action) {
             // Valid action flows
@@ -77,21 +77,21 @@ impl Service {
             (Some(logged_action), req_action) if (*logged_action == req_action) => {
                 println!(
                     "[tx {}] Resending already processed response for action {:?}",
-                    req.tx, req.action
+                    req.tx.id, req.action
                 );
-                self.respond_message(&from, req.tx, req.action)
+                self.respond_message(&from, &req.tx, req.action)
             }
 
             // Retrying an aborted transaction
             (Some(Action::Abort), Action::Prepare) => {
-                println!("[tx {}] Retrying previously aborted transaction", req.tx);
+                println!("[tx {}] Retrying previously aborted transaction", req.tx.id);
                 self.prepare_tx(&from, &req)
             }
 
             // Retrying a previously committed transaction -> do nothing and resend status
             (Some(Action::Commit), Action::Prepare) => {
-                println!("[tx {}] Transaction has already been committed", req.tx);
-                self.respond_message(&from, req.tx, Action::Commit)
+                println!("[tx {}] Transaction has already been committed", req.tx.id);
+                self.respond_message(&from, &req.tx, Action::Commit)
             }
 
             // Communication issue
@@ -99,9 +99,9 @@ impl Service {
             (None, Action::Abort) => {
                 // Abort transaction but do NOT release resources,
                 // since they were not reserved
-                self.tx_log.insert(req.tx, Action::Abort);
-                println!("[tx {}] Aborting new transaction", req.tx);
-                self.respond_message(&from, req.tx, Action::Abort)
+                self.tx_log.insert(req.tx.id, Action::Abort);
+                println!("[tx {}] Aborting new transaction", req.tx.id);
+                self.respond_message(&from, &req.tx, Action::Abort)
             }
 
             // Invalid action flow (should never happen)
@@ -123,20 +123,20 @@ impl Service {
         addr: &SocketAddr,
         req: &Message,
     ) -> BoxResult<()> {
-        println!("[tx {}] Inserting <{:?}> action in log...", req.tx, action);
-        self.tx_log.insert(req.tx, action);
+        println!("[tx {}] Inserting <{:?}> action in log...", req.tx.id, action);
+        self.tx_log.insert(req.tx.id, action);
 
-        println!("[tx {}] Responding with action <{:?}>...", req.tx, action);
-        self.respond_message(addr, req.tx, action)?;
+        println!("[tx {}] Responding with action <{:?}>...", req.tx.id, action);
+        self.respond_message(addr, &req.tx, action)?;
 
         Ok(())
     }
 
-    fn respond_message(&mut self, addr: &SocketAddr, tx: Tx, action: Action) -> BoxResult<()> {
+    fn respond_message(&mut self, addr: &SocketAddr, tx: &Transaction, action: Action) -> BoxResult<()> {
         let msg = Message {
             from: self.name,
             action,
-            tx,
+            tx: *tx, // copy
         };
 
         let response_time = time::Duration::from_millis(self.response_time_ms);
