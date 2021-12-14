@@ -48,10 +48,11 @@ impl Bank {
 
         if *account_money < required_money {
             println!(
-                "[tx {}] insufficient money - required: {} available: {}",
+                "[tx {}] insufficient money => bank loan - required: {} available: {}",
                 tx.id, required_money, *account_money
             );
-            // TODO: Reject transaction
+            // WONTDO: Reject transaction [we must add another message]
+            // for now, we allow "bank loans" (negative money)
         }
 
         let account_left_money = *account_money - required_money;

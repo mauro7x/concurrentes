@@ -5,7 +5,7 @@ use std::{
     net::UdpSocket,
     sync::{
         atomic::{AtomicBool, Ordering::Relaxed},
-        Arc, MutexGuard,
+        Arc, Mutex, MutexGuard,
     },
     thread,
 };
@@ -37,6 +37,7 @@ use csv::{ByteRecord, Reader, Writer};
 // ----------------------------------------------------------------------------
 
 pub struct DataPlane {
+    current_tx: Arc<Mutex<Option<Tx>>>,
     responses: Arc<Shared<Responses>>,
     socket: UdpSocket,
     tx_log: TxLog,
@@ -62,7 +63,10 @@ impl DataPlane {
         let socket = UdpSocket::bind(format!("0.0.0.0:{}", port))?;
         socket.set_nonblocking(true)?;
 
+        let current_tx = Arc::new(Mutex::new(None));
+
         let mut ret = DataPlane {
+            current_tx,
             responses: Arc::new(Shared::new(responses)),
             socket,
             tx_log: TxLog::new()?,
@@ -82,6 +86,12 @@ impl DataPlane {
         Ok(ret)
     }
 
+    fn set_current_tx(&mut self, tx: Option<Tx>) -> BoxResult<()> {
+        let mut current_tx = self.current_tx.lock().map_err(|_| MUTEX_LOCK_ERROR)?;
+        *current_tx = tx;
+        Ok(())
+    }
+
     pub fn process_transaction(&mut self) -> BoxResult<bool> {
         let mut payments_file = csv::Reader::from_path(PAYMENTS_TO_PROCESS)?;
 
@@ -91,6 +101,7 @@ impl DataPlane {
             let byte_record = result?;
 
             let tx: Transaction = (&byte_record).deserialize(None)?;
+            self.set_current_tx(Some(tx.id))?;
             check_threads(&mut self.threads)?;
 
             match self.tx_log.get(&tx.id)? {
@@ -114,6 +125,7 @@ impl DataPlane {
                 }
             };
             self.update_payments_file(&mut payments_file)?;
+            self.set_current_tx(None)?;
 
             return Ok(true);
         }
@@ -165,6 +177,7 @@ impl DataPlane {
 
     fn receiver(&self) -> BoxResult<DataPlaneReceiver> {
         Ok(DataPlaneReceiver {
+            current_tx: self.current_tx.clone(),
             responses: self.responses.clone(),
             socket: self.socket.try_clone()?,
             stopped: self.stopped.clone(),
@@ -325,6 +338,7 @@ impl Drop for DataPlane {
 // ----------------------------------------------------------------------------
 
 struct DataPlaneReceiver {
+    current_tx: Arc<Mutex<Option<Tx>>>,
     responses: Arc<Shared<Responses>>,
     socket: UdpSocket,
     stopped: Arc<AtomicBool>,
@@ -359,15 +373,24 @@ impl DataPlaneReceiver {
     }
 
     fn process_response(&mut self, res: &Message) -> BoxResult<()> {
-        // TODO: contemplate case of timeout and late response (transaction aborted)
-        // Discard messages of other txs?
-        self.responses
-            .mutex
-            .lock()
-            .map_err(|_| MUTEX_LOCK_ERROR)?
-            .insert(res.from, Some(res.action));
-        self.responses.cv.notify_all();
-
-        Ok(())
+        let current_tx: Option<Tx>;
+        {
+            current_tx = *self.current_tx.lock().map_err(|_| MUTEX_LOCK_ERROR)?;
+        }
+        match current_tx {
+            Some(tx) if tx == res.tx.id => {
+                self.responses
+                    .mutex
+                    .lock()
+                    .map_err(|_| MUTEX_LOCK_ERROR)?
+                    .insert(res.from, Some(res.action));
+                self.responses.cv.notify_all();
+                Ok(())
+            },
+            _ => {
+                println!("[WARN] process_response: ignoring response. current_tx: {:?} != recved_tx {}", current_tx, res.tx.id);
+                Ok(())
+            }
+        }
     }
 }
