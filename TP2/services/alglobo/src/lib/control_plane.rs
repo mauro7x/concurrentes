@@ -349,7 +349,7 @@ impl ControlPlane {
         Ok(())
     }
 
-    // Active object methods (run in their own thread)
+    // Receiver and handlers
 
     fn receiver(&mut self) -> BoxResult<()> {
         let mut message: Message = NEW_MESSAGE;
@@ -369,8 +369,6 @@ impl ControlPlane {
             };
         }
     }
-
-    // Handlers
 
     fn handle_ping(&self, from: SocketAddr) -> BoxResult<()> {
         println!(
