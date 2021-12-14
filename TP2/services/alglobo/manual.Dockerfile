@@ -11,5 +11,5 @@ RUN rm dummy.rs
 COPY . .
 COPY ./shared/alglobo_directory_protocol.rs ./src/lib/protocol/directory.rs
 COPY ./shared/alglobo_generic-service_protocol.rs ./src/lib/protocol/data.rs
-RUN cargo build --release --bin app
-CMD ["target/release/app"]
+RUN cargo build --release --bin manual
+CMD ["target/release/manual"]

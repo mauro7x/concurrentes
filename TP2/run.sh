@@ -16,6 +16,7 @@ FC=$CYAN
 # Vars
 REPLICAS="${1:-0}"
 PAYMENTS_FILE="${2:-./examples/payments.csv}"
+RETRY_PAYMENTS_FILE="./examples/retry_payments.csv"
 ACCOUNTS_FILE="${3:-./examples/accounts.csv}"
 
 # Functions
@@ -39,7 +40,9 @@ function copy_runtime_dependencies {
   # Payments source
   mkdir -p ./.tmp &&
   cp "${PAYMENTS_FILE}" ./.tmp/payments.csv &&
-  cp "${ACCOUNTS_FILE}" ./.tmp/accounts.csv
+  cp "${ACCOUNTS_FILE}" ./.tmp/accounts.csv &&
+  cp "${RETRY_PAYMENTS_FILE}" ./.tmp/retry_payments.csv 
+
 }
 
 function prepare_workspace {
@@ -48,6 +51,7 @@ function prepare_workspace {
 }
 
 function clean_workspace {
+  dcmp down --remove-orphans
   rm -rf ./.tmp
 }
 
@@ -85,8 +89,8 @@ echo -e " ${CHECK}\n"
 echo -e "${CYANB}> Running with ${REPLICAS} replicas...${NC}"
 docker-compose up --scale alglobo=$REPLICAS
 
-printf "> Cleaning workspace..."
+printf "\n> Cleaning workspace..."
 clean_workspace
 echo -e " ${CHECK}\n"
 
-echo -e "\n${CYANB}Bye bye!${NC}"
+echo -e "${CYANB}Bye bye!${NC}"

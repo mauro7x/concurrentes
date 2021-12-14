@@ -10,7 +10,7 @@ pub const RESTART_TIME: Duration = Duration::from_secs(10);
 
 fn run() -> BoxResult<()> {
     let mut replica = Replica::new()?;
-    replica.run_iteration()?;
+    replica.run()?;
 
     Ok(())
 }

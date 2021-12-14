@@ -8,6 +8,9 @@ services:
       - ./config/directory.env
     environment:
       - PORT=${DIRECTORY_PORT}
+    networks:
+      - internal
+
 
   alglobo:
     build: ./services/alglobo
@@ -21,6 +24,9 @@ services:
       - SVC_PORT=${SERVICE_PORT}
     volumes:
       - ./.tmp:/usr/app/.tmp
+    networks:
+      - internal
+      - external
     depends_on:
       - directory
       - airline
@@ -34,6 +40,8 @@ services:
       - ./config/airline.env
     environment:
       - PORT=${SERVICE_PORT}
+    networks:
+      - external
 
   bank:
     build: ./services/generic-service
@@ -44,6 +52,8 @@ services:
       - PORT=${SERVICE_PORT}
     volumes:
       - ./.tmp:/usr/app/.tmp
+    networks:
+      - external
 
   hotel:
     build: ./services/generic-service
@@ -52,3 +62,15 @@ services:
       - ./config/hotel.env
     environment:
       - PORT=${SERVICE_PORT}
+    networks:
+      - external
+
+networks:
+  
+  internal:
+    driver: bridge
+
+  external:
+    driver: bridge
+    attachable: true
+  

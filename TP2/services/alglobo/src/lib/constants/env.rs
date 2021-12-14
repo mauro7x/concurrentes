@@ -1,3 +1,6 @@
+// General
+pub const FAILURE_RATE: &str = "FAILURE_RATE";
+
 // Control plane
 pub const CTRL_PORT: &str = "CONTROL_PORT";
 pub const DATA_PORT: &str = "DATA_PORT";
