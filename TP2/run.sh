@@ -16,7 +16,6 @@ FC=$CYAN
 # Vars
 REPLICAS="${1:-0}"
 PAYMENTS_FILE="${2:-./examples/payments.csv}"
-RETRY_PAYMENTS_FILE="./examples/retry_payments.csv"
 ACCOUNTS_FILE="${3:-./examples/accounts.csv}"
 
 # Functions
@@ -41,8 +40,7 @@ function copy_runtime_dependencies {
   mkdir -p ./.tmp &&
   cp "${PAYMENTS_FILE}" ./.tmp/payments.csv &&
   cp "${ACCOUNTS_FILE}" ./.tmp/accounts.csv &&
-  cp "${RETRY_PAYMENTS_FILE}" ./.tmp/retry_payments.csv 
-
+  echo "id,cbu,airline_cost,hotel_cost" > ./.tmp/failed_payments.csv
 }
 
 function prepare_workspace {
@@ -51,7 +49,7 @@ function prepare_workspace {
 }
 
 function clean_workspace {
-  dcmp down --remove-orphans
+  docker-compose down --remove-orphans > /dev/null 2>&1
   rm -rf ./.tmp
 }
 

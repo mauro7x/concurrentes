@@ -16,8 +16,8 @@ use crate::{
         data::{N_PREPARE_RETRIES, WAIT_ALL_RESPONSES_TIMEOUT},
         errors::MUTEX_LOCK_ERROR,
         general::NONBLOCKING_POLLING_RATE,
+        paths::FAILED_PAYMENTS,
         paths::PAYMENTS_TO_PROCESS,
-        paths::PAYMENTS_TO_RETRY,
         paths::TEMP_PAYMENTS_TO_PROCESS,
     },
     protocol::data::unpack_message,
@@ -155,7 +155,7 @@ impl DataPlane {
             .write(true)
             .read(true)
             .append(true)
-            .open(PAYMENTS_TO_RETRY)?;
+            .open(FAILED_PAYMENTS)?;
 
         let mut reader = Reader::from_reader(&file);
 
@@ -386,9 +386,12 @@ impl DataPlaneReceiver {
                     .insert(res.from, Some(res.action));
                 self.responses.cv.notify_all();
                 Ok(())
-            },
+            }
             _ => {
-                println!("[WARN] process_response: ignoring response. current_tx: {:?} != recved_tx {}", current_tx, res.tx.id);
+                println!(
+                    "[WARN] process_response: ignoring response. current_tx: {:?} != recved_tx {}",
+                    current_tx, res.tx.id
+                );
                 Ok(())
             }
         }
