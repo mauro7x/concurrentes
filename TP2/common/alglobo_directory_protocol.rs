@@ -1,3 +1,5 @@
+/* Shared protocol.rs between alglobo and directory */
+
 pub type Opcode = [u8; 1];
 
 // AlGlobo -> Directory

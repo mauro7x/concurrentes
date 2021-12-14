@@ -189,7 +189,9 @@ impl Directory {
 
         // 3. Send rest of the nodes
         for peer in &self.nodes {
-            stream.write_all(&encode(peer)?)?;
+            if peer.ip != node.ip {
+                stream.write_all(&encode(peer)?)?;
+            }
         }
 
         // 4. Send EOB

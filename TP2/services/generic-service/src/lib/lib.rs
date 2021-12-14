@@ -1,10 +1,10 @@
 // Public
+pub mod bank;
 pub mod service;
 pub mod types;
-pub mod bank;
 
 // Private
 mod config;
 mod constants;
-mod protocol;
 mod paths;
+mod protocol;
