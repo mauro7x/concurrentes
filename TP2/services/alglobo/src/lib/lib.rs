@@ -12,3 +12,4 @@ mod protocol;
 mod service_directory;
 mod thread_utils;
 mod tx_log;
+mod utils;
