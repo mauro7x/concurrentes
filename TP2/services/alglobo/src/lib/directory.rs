@@ -44,8 +44,8 @@ impl Directory {
     }
 
     pub fn finish(&self) -> BoxResult<()> {
-        // let mut stream = TcpStream::connect(self.addr)?;
-        // stream.write_all(&FINISHED)?;
+        let mut stream = TcpStream::connect(self.addr)?;
+        stream.write_all(&FINISHED)?;
 
         Ok(())
     }

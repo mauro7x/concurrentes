@@ -265,7 +265,10 @@ impl Directory {
     // Helpers
 
     fn keep_running(&self) -> bool {
-        !self.finished || !self.nodes.is_empty()
+        // We prefer to keep the directory open for now
+
+        // !self.finished || !self.nodes.is_empty()
+        true
     }
 
     fn full(&self) -> bool {
