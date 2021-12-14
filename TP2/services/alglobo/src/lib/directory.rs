@@ -91,7 +91,7 @@ impl Directory {
                     self.id2ip.remove(&old_id);
                 };
                 if let Some(old_ip) = self.id2ip.insert(id, ip) {
-                    println!("[WARN] (ID: {}) This block should never be reached, since the Directory should not allow for IDs collisions", self.id);
+                    warn!("(ID: {}) This block should never be reached, since the Directory should not allow for IDs collisions", self.id);
                     self.ip2id.remove(&old_ip);
                 }
             }
@@ -100,8 +100,8 @@ impl Directory {
                 self.ip2id.remove(&ip);
             }
             _ => {
-                println!(
-                    "[ERROR] (ID: {}) Received unexpected opcode from Directory, aborting",
+                error!(
+                    "(ID: {}) Received unexpected opcode from Directory, aborting",
                     self.id
                 );
                 return Err("Unexpected opcode from Directory".into());
@@ -121,7 +121,7 @@ impl Directory {
                 Ok(stream) => return Ok(stream),
                 Err(err) => {
                     if attempts == max_attemps {
-                        println!("[ERROR] (ID: -) Max directory connection attemps, aborting");
+                        error!("(ID: -) Max directory connection attemps, aborting");
                         return Err(err.into());
                     };
 
@@ -154,11 +154,11 @@ impl Directory {
         match buf {
             ACCEPTED => {}
             REJECTED => {
-                println!("[WARN] (ID: -) Register rejected because directory is full, aborting");
+                warn!("(ID: -) Register rejected because directory is full, aborting");
                 return Err("Rejected: Directory full".into());
             }
             [_] => {
-                println!("[ERROR] (ID: -) Received unknown message from Directory, aborting");
+                error!("(ID: -) Received unknown message from Directory, aborting");
                 return Err("Unknown message from Directory".into());
             }
         }

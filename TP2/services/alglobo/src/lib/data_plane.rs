@@ -49,7 +49,7 @@ pub struct DataPlane {
 
 impl DataPlane {
     pub fn new() -> BoxResult<Self> {
-        println!("[DEBUG] (Data) Creating Config...");
+        debug!("Creating Config...");
         let Config {
             port,
             hotel_addr,
@@ -57,10 +57,10 @@ impl DataPlane {
             bank_addr,
         } = Config::new()?;
 
-        println!("[DEBUG] (Data) Creating service responses...");
+        debug!("Creating service responses...");
         let responses = DataPlane::create_responses();
 
-        println!("[DEBUG] (Data) Creating and binding socket...");
+        debug!("Creating and binding socket...");
         let socket = UdpSocket::bind(format!("0.0.0.0:{}", port))?;
         socket.set_nonblocking(true)?;
 
@@ -76,7 +76,7 @@ impl DataPlane {
             stopped: Arc::new(AtomicBool::new(false)),
         };
 
-        println!("[DEBUG] (Data) Starting Receiver...");
+        debug!("Starting Receiver...");
         let receiver = ret.receiver()?;
         safe_spawn(
             receiver,
@@ -215,8 +215,8 @@ impl DataPlane {
 
         while response.is_none() && (n_retries.is_none() || n_attempts < n_retries.unwrap()) {
             n_attempts += 1;
-            println!(
-                "[tx {}] broadcasting {:?} - {} attempt",
+            info!(
+                "[tx {}] Broadcasting {:?} - {} attempt",
                 tx.id, action, n_attempts
             );
             response = self.broadcast_message_and_wait(tx, action)?;
@@ -284,8 +284,8 @@ impl DataPlane {
             };
         });
 
-        println!(
-            "[tx {}] All responses received. Action: {:?} Responses: [{}] Response action: {:?}",
+        info!(
+            "[tx {}] All responses received.\nAction: {:?}\nResponses: [{}]\nResponse action: {:?}",
             tx, expected_action, responses_str, response_action
         );
         Ok(response_action)
@@ -327,12 +327,12 @@ impl DataPlane {
 
 impl Drop for DataPlane {
     fn drop(&mut self) {
-        println!("[DEBUG] (Data) Destroying...");
+        debug!("Destroying...");
         self.stopped.store(true, Relaxed);
         while let Some(thread) = self.threads.pop() {
             thread.joiner.join().expect("Error joining threads");
         }
-        println!("[DEBUG] (Data) Destroyed successfully");
+        debug!("Destroyed successfully");
     }
 }
 
@@ -389,8 +389,8 @@ impl DataPlaneReceiver {
                 Ok(())
             }
             _ => {
-                println!(
-                    "[WARN] process_response: ignoring response. current_tx: {:?} != recved_tx {}",
+                warn!(
+                    "process_response: ignoring response. current_tx: {:?} != recved_tx {}",
                     current_tx, res.tx.id
                 );
                 Ok(())

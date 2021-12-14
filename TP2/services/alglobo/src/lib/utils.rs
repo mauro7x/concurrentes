@@ -11,7 +11,7 @@ pub fn fail_randomly() -> BoxResult<()> {
     let coin = thread_rng().gen_range(0.0..1.0);
     match coin < failure_rate()? {
         true => {
-            println!("<BOOM> (coin: {})", coin);
+            error!("<BOOM> (random explosion, exciting, isn't it?!)");
             Err("Random failure".into())
         }
         false => Ok(()),
