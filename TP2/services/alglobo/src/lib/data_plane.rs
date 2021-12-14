@@ -65,7 +65,6 @@ impl DataPlane {
             DataPlaneReceiver::process_responses,
             &mut ret.threads,
         )?;
-        // thread::spawn(move || receiver.run());
 
         Ok(ret)
     }

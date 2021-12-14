@@ -7,7 +7,7 @@ use std::{
 use rand::{thread_rng, Rng};
 
 use crate::{
-    bank::{Bank},
+    bank::Bank,
     config::Config,
     protocol::{recv_msg, send_msg_to},
     types::{
@@ -24,7 +24,7 @@ pub struct Service {
     failure_rate: f64,
     response_time_ms: u64,
     tx_log: HashMap<Tx, Action>,
-    bank: Option<Bank>
+    bank: Option<Bank>,
 }
 
 impl Service {
@@ -43,15 +43,15 @@ impl Service {
             "airline" => {
                 bank = None;
                 Entity::Airline
-            },
+            }
             "bank" => {
                 bank = Some(Bank::new()?);
                 Entity::Bank
-            },
+            }
             "hotel" => {
                 bank = None;
                 Entity::Hotel
-            },
+            }
             _ => return Err(format!("Unknown entity name ({})", name).into()),
         };
 
@@ -62,7 +62,7 @@ impl Service {
             failure_rate,
             response_time_ms,
             tx_log: HashMap::new(),
-            bank
+            bank,
         };
 
         println!("[DEBUG] Service created successfully");
@@ -136,16 +136,27 @@ impl Service {
         addr: &SocketAddr,
         req: &Message,
     ) -> BoxResult<()> {
-        println!("[tx {}] Inserting <{:?}> action in log...", req.tx.id, action);
+        println!(
+            "[tx {}] Inserting <{:?}> action in log...",
+            req.tx.id, action
+        );
         self.tx_log.insert(req.tx.id, action);
 
-        println!("[tx {}] Responding with action <{:?}>...", req.tx.id, action);
+        println!(
+            "[tx {}] Responding with action <{:?}>...",
+            req.tx.id, action
+        );
         self.respond_message(addr, &req.tx, action)?;
 
         Ok(())
     }
 
-    fn respond_message(&mut self, addr: &SocketAddr, tx: &Transaction, action: Action) -> BoxResult<()> {
+    fn respond_message(
+        &mut self,
+        addr: &SocketAddr,
+        tx: &Transaction,
+        action: Action,
+    ) -> BoxResult<()> {
         let msg = Message {
             from: self.name,
             action,
@@ -175,13 +186,13 @@ impl Service {
         }
 
         let action_taken = match self.name {
-            Entity::Bank =>
-                self.bank
-                    .as_mut()
-                    .ok_or("prepare_tx: bank has not been initialized")?
-                    .reserve_resources(&req.tx),
+            Entity::Bank => self
+                .bank
+                .as_mut()
+                .ok_or("prepare_tx: bank has not been initialized")?
+                .reserve_resources(&req.tx),
             Entity::Airline | Entity::Hotel => Ok(Action::Prepare),
-            _ => Err("prepare_tx: unknown entity".into())
+            _ => Err("prepare_tx: unknown entity".into()),
         }?;
 
         self.log_and_respond(action_taken, addr, req)?;
