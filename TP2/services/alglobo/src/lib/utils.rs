@@ -9,7 +9,10 @@ use rand::{thread_rng, Rng};
 pub fn fail_randomly() -> BoxResult<()> {
     let coin = thread_rng().gen_range(0.0..1.0);
     match coin < failure_rate()? {
-        true => Err("Random failure".into()),
+        true => {
+            println!("<BOOM>");
+            Err("Random failure".into())
+        }
         false => Ok(()),
     }
 }

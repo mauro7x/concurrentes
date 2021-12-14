@@ -25,6 +25,7 @@ use crate::{
         common::{BoxResult, Id},
         control::{SafeThread, Shared},
     },
+    utils::fail_randomly,
 };
 
 // ----------------------------------------------------------------------------
@@ -51,6 +52,7 @@ impl ControlPlane {
         println!("[DEBUG] (ID: -) Creating Directory...");
         let directory = Directory::new(directory_addr)?;
         let id = directory.get_my_id();
+        fail_randomly()?;
 
         println!(
             "[DEBUG] (ID: {}) (Control) Creating and binding socket...",
@@ -94,12 +96,14 @@ impl ControlPlane {
     pub fn healthcheck_leader(&mut self) -> BoxResult<()> {
         let healthcheck_socket = UdpSocket::bind("0.0.0.0:0")?;
         healthcheck_socket.set_read_timeout(Some(HEALTHCHECK_TIMEOUT))?;
+        fail_randomly()?;
 
         while !self.am_i_leader()? {
             println!(
                 "[INFO] (ID: {}) (Control) Sending healthcheck to leader...",
                 self.id
             );
+            fail_randomly()?;
 
             if self.is_leader_alive(&healthcheck_socket)? {
                 println!("[INFO] (ID: {}) (Control) Leader is alive!", self.id);
@@ -285,6 +289,8 @@ impl ControlPlane {
 
         loop {
             check_threads(&mut self.threads)?;
+            fail_randomly()?;
+
             match self.get_leader_addr()? {
                 Some(leader_addr) => {
                     socket.send_to(&[PING], leader_addr)?;
@@ -365,6 +371,7 @@ impl ControlPlane {
 
     fn receiver(&mut self) -> BoxResult<()> {
         while !self.stopped.load(Relaxed) {
+            fail_randomly()?;
             self.recv_msg()?;
         }
 
