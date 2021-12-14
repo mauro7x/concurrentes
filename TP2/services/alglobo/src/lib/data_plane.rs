@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fs::{self, File},
+    fs::{self, File, OpenOptions},
     io::ErrorKind,
     net::UdpSocket,
     sync::{
@@ -17,6 +17,7 @@ use crate::{
         errors::MUTEX_LOCK_ERROR,
         general::NONBLOCKING_POLLING_RATE,
         paths::PAYMENTS_TO_PROCESS,
+        paths::PAYMENTS_TO_RETRY,
         paths::TEMP_PAYMENTS_TO_PROCESS,
     },
     protocol::data::unpack_message,
@@ -31,7 +32,7 @@ use crate::{
     utils::fail_randomly,
 };
 
-use csv::Reader;
+use csv::{ByteRecord, Reader, Writer};
 
 // ----------------------------------------------------------------------------
 
@@ -84,20 +85,45 @@ impl DataPlane {
     pub fn process_transaction(&mut self) -> BoxResult<bool> {
         let mut payments_file = csv::Reader::from_path(PAYMENTS_TO_PROCESS)?;
 
-        let mut iter = payments_file.deserialize();
+        let mut iter = payments_file.byte_records();
 
         if let Some(result) = iter.next() {
-            let record: Transaction = result?;
-            self.process_tx(&record)?;
+            let byte_record = result?;
+
+            let tx: Transaction = (&byte_record).deserialize(None)?;
+            check_threads(&mut self.threads)?;
+
+            match self.tx_log.get(&tx.id)? {
+                Some(Action::Commit) => self.commit_tx(&tx)?,
+                Some(Action::Abort) => self.abort_tx(&tx)?,
+                Some(Action::Prepare) | None => {
+                    match self.prepare_tx(&tx)? {
+                        Action::Prepare => self.commit_tx(&tx)?,
+                        Action::Abort => {
+                            self.update_ret_file(&byte_record)?;
+                            self.abort_tx(&tx)?
+                        }
+                        // commit should never be returned
+                        Action::Commit => {
+                            return Err(
+                                "[ERROR] process_tx: prepare returned commit as response action"
+                                    .into(),
+                            );
+                        }
+                    };
+                }
+            };
             self.update_payments_file(&mut payments_file)?;
+
             return Ok(true);
         }
 
         Ok(false)
     }
 
+    // Private
     fn update_payments_file(&mut self, payments_file: &mut Reader<File>) -> BoxResult<()> {
-        let mut wtr = csv::Writer::from_path(TEMP_PAYMENTS_TO_PROCESS)?;
+        let mut wtr = Writer::from_path(TEMP_PAYMENTS_TO_PROCESS)?;
 
         wtr.write_record(payments_file.byte_headers()?)?;
 
@@ -112,7 +138,30 @@ impl DataPlane {
         Ok(())
     }
 
-    // Private
+    fn update_ret_file(&mut self, byte_record: &ByteRecord) -> BoxResult<()> {
+        let file = OpenOptions::new()
+            .write(true)
+            .read(true)
+            .append(true)
+            .open(PAYMENTS_TO_RETRY)?;
+
+        let mut reader = Reader::from_reader(&file);
+
+        let value: Transaction = byte_record.deserialize(None)?;
+
+        for record in reader.deserialize() {
+            let tx_to_retry: Transaction = record?;
+            if tx_to_retry.id == value.id {
+                return Ok(());
+            }
+        }
+
+        let mut wtr = Writer::from_writer(&file);
+
+        wtr.write_byte_record(byte_record)?;
+
+        Ok(())
+    }
 
     fn receiver(&self) -> BoxResult<DataPlaneReceiver> {
         Ok(DataPlaneReceiver {
@@ -228,34 +277,16 @@ impl DataPlane {
         Ok(response_action)
     }
 
-    fn process_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
-        check_threads(&mut self.threads)?;
-
-        // TODO: ESTADO COMPARTIDO
-        match self.tx_log.get(&tx.id)? {
-            Some(Action::Commit) => self.commit_tx(tx),
-            Some(Action::Abort) => self.abort_tx(tx),
-            Some(Action::Prepare) | None => {
-                match self.prepare_tx(tx)? {
-                    Action::Prepare => self.commit_tx(tx),
-                    Action::Abort => self.abort_tx(tx),
-                    // commit should never be returned
-                    Action::Commit => {
-                        panic!("process_tx: prepare returned commit as response action")
-                    }
-                }
-            }
-        }
-    }
-
-    fn commit_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
+    fn commit_tx(&mut self, tx: &Transaction) -> BoxResult<()> {
         self.tx_log.insert(tx.id, Action::Commit)?;
-        self.broadcast_until_getting_response_from_all_services(tx, Action::Commit, None)
+        self.broadcast_until_getting_response_from_all_services(tx, Action::Commit, None)?;
+        Ok(())
     }
 
-    fn abort_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
+    fn abort_tx(&mut self, tx: &Transaction) -> BoxResult<()> {
         self.tx_log.insert(tx.id, Action::Abort)?;
-        self.broadcast_until_getting_response_from_all_services(tx, Action::Abort, None)
+        self.broadcast_until_getting_response_from_all_services(tx, Action::Abort, None)?;
+        Ok(())
     }
 
     fn prepare_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
