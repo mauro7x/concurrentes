@@ -15,6 +15,8 @@ use crate::{
     utils::{encode, msg_from, next},
 };
 
+use log::*;
+
 // ----------------------------------------------------------------------------
 
 pub struct Directory {
@@ -48,8 +50,8 @@ impl Directory {
     }
 
     pub fn run(&mut self) -> BoxResult<()> {
-        println!(
-            "[INFO] Accepting connections on port {}...",
+        info!(
+            "Accepting connections on port {}...",
             self.listener.local_addr()?.port()
         );
 
@@ -64,8 +66,6 @@ impl Directory {
             }
         }
 
-        println!("[INFO] Terminated gracefully");
-
         Ok(())
     }
 
@@ -77,8 +77,8 @@ impl Directory {
 
         let mut buf: Opcode = [0; 1];
         if let Err(err) = stream.read_exact(&mut buf) {
-            println!(
-                "[WARN] Error ({}) while reading from {}, aborting connection",
+            warn!(
+                "Error ({}) while reading from {}, aborting connection",
                 err, ip
             );
             return Ok(());
@@ -90,10 +90,7 @@ impl Directory {
 
             // Unknown
             _ => {
-                println!(
-                    "[WARN] Unknown command received from {}, aborting connection",
-                    ip
-                );
+                warn!("Unknown command received from {}, aborting connection", ip);
             }
         };
 
@@ -101,17 +98,14 @@ impl Directory {
     }
 
     fn register_handler(&mut self, ip: Ipv4Addr, mut stream: TcpStream) -> BoxResult<()> {
-        println!("[INFO] Register request from {}", ip);
+        info!("Register request from {}", ip);
 
         if self.full() && !self.remove_dead_nodes()? {
-            println!(
-                "[INFO] {} connection rejected since max_nodes being used",
-                ip
-            );
+            info!("{} connection rejected since max_nodes being used", ip);
 
             if let Err(err) = stream.write_all(&REJECTED) {
-                println!(
-                    "[WARN] Error while responding REJECTED to {}: {} (ignoring)",
+                warn!(
+                    "Error while responding REJECTED to {}: {} (ignoring)",
                     ip, err
                 );
             }
@@ -121,8 +115,8 @@ impl Directory {
         let id = self.get_next_id();
         let mut node = Node { id, ip, stream };
         if let Err(err) = self.broadcast_current_to(&mut node) {
-            println!(
-                "[WARN] Error while broadcasting current state to {}: {} (ignoring)",
+            warn!(
+                "Error while broadcasting current state to {}: {} (ignoring)",
                 ip, err
             );
             return Ok(());
@@ -132,22 +126,22 @@ impl Directory {
         self.used_ids.insert(id);
         self.next_id = next(id);
 
-        println!("[INFO] {} joined the network with id: {}", ip, id);
+        info!("{} joined the network with id: {}", ip, id);
         self.print();
 
         Ok(())
     }
 
     fn finished_handler(&mut self, ip: Ipv4Addr) {
-        println!("[INFO] Finished request from {}", ip);
+        info!("Finished request from {}", ip);
         self.finished = true;
 
         match self.remove(ip) {
             Ok(id) => {
-                println!("[INFO] {} (ID: {}) leaved the network", ip, id);
+                info!("{} (ID: {}) leaved the network", ip, id);
                 self.print();
             }
-            Err(err) => println!("[WARN] Error while removing finished node: {}", err),
+            Err(err) => warn!("Error while removing finished node: {}", err),
         };
     }
 
@@ -232,7 +226,7 @@ impl Directory {
     }
 
     fn broadcast_dead(&mut self, dead_nodes: Vec<Node>) -> BoxResult<()> {
-        println!("[DEBUG] Removing detected dead nodes: {:#?}", dead_nodes);
+        debug!("Removing detected dead nodes: {:#?}", dead_nodes);
         let mut nodes = vec![];
         let mut more_dead_nodes = vec![];
 

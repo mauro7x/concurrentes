@@ -7,13 +7,13 @@ extern crate log;
 // ----------------------------------------------------------------------------
 
 fn run() -> BoxResult<()> {
-    // debug!("Creating Service...");
+    debug!("Creating...");
     let mut service = Service::new()?;
 
-    // debug!("Running Service...");
+    debug!("Running...");
     service.run()?;
 
-    // debug!("Service terminated gracefully");
+    debug!("Terminated gracefully");
 
     Ok(())
 }
