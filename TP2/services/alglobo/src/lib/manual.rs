@@ -1,17 +1,32 @@
-use std::io::{self, BufRead};
+use std::io::{self};
 
-use crate::{config::data::Config, types::common::BoxResult};
+use crate::{types::{common::BoxResult}, data_plane::DataPlane};
 
 // ----------------------------------------------------------------------------
 
-pub fn run_manual_alglobo() -> BoxResult<()> {
-    let config = Config::new()?;
-    println!("Config: {:#?}", config);
+fn prompt() {
+    let expected_format = "tx_id,cbu,airline_cost,hotel_cost";
+    println!("\nPlease enter the transaction to retry: (format: {})\n", expected_format);
+}
 
-    let stdin = io::stdin();
-    println!("Reading user input..");
-    for line in stdin.lock().lines() {
-        println!("READ: {}", line.unwrap());
+pub fn run_manual_alglobo() -> BoxResult<()> {
+
+    let mut data_plane = DataPlane::new(true)?;
+
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .from_reader(io::stdin());
+
+    prompt();
+    for input in rdr.deserialize() {
+        match input {
+            Ok(tx) => {
+                println!("{:?}", tx);
+                data_plane.process_transaction(&tx, None, None)?;
+            },
+            Err(_) => println!("error: invalid input.")
+        }
+        prompt();
     }
 
     Ok(())

@@ -52,13 +52,13 @@ impl Replica {
     }
 
     fn run_as_leader(&mut self) -> BoxResult<bool> {
-        let mut data_plane = DataPlane::new()?;
+        let mut data_plane = DataPlane::new(false)?;
         let mut transactions_pending = true;
         fail_randomly()?;
 
         while self.control.am_i_leader()? && transactions_pending {
             fail_randomly()?;
-            transactions_pending = data_plane.process_transaction()?;
+            transactions_pending = data_plane.process_transaction_from_file()?;
         }
 
         Ok(!transactions_pending)

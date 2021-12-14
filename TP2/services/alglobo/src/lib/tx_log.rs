@@ -64,6 +64,9 @@ impl TxLog {
 
         self.file
             .write_all(format!("{}{}\n", tx, action).as_bytes())?;
+
+        // we ensure log is persisted to disk
+        self.file.sync_all()?;
         Ok(())
     }
 
