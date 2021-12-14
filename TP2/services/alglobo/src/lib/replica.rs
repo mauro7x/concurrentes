@@ -5,6 +5,8 @@ use crate::{
     utils::fail_randomly,
 };
 
+use log::*;
+
 // ----------------------------------------------------------------------------
 
 pub struct Replica {

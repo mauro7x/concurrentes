@@ -13,6 +13,8 @@ use crate::{
     },
 };
 
+use log::*;
+
 pub struct TxLog {
     file: File,
     in_memory_log: HashMap<Tx, Action>,

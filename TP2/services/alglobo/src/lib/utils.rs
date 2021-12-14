@@ -2,6 +2,7 @@ use std::env;
 
 use crate::{constants::env::FAILURE_RATE, types::common::BoxResult};
 
+use log::*;
 use rand::{thread_rng, Rng};
 
 // ----------------------------------------------------------------------------
