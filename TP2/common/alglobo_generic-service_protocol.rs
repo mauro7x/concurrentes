@@ -7,16 +7,16 @@ use std::{
 
 use crate::types::{
     common::BoxResult,
-    data::{Action, Entity, Message},
+    data::{Action, Entity, Message, Transaction},
 };
 
 // ----------------------------------------------------------------------------
 
 // Message structure
 //
-// | --- 1 byte --- | --- 1 byte --- | -- 4 bytes -- |
-// |   FROM_ENTITY  |     ACTION     |   TX_NUMBER   |
-// | ---------------|----------------|---------------|
+// | --- 1 byte --- | --- 1 byte --- | -- 4 bytes -- | -- 4 bytes -- | -- 4 bytes -- | -- 4 bytes -- |
+// |   FROM_ENTITY  |     ACTION     |   TX_NUMBER   |      CBU      |  AIRLINE_COST |   HOTEL_COST  |
+// | ---------------|----------------|---------------|---------------|---------------|---------------|
 
 // FROM_ENTITIES
 const AIRLINE_REP: u8 = b'A';
@@ -48,7 +48,7 @@ pub fn send_msg_to(socket: &UdpSocket, msg: &Message, addr: &SocketAddr) -> BoxR
 }
 
 pub fn recv_msg(socket: &UdpSocket) -> BoxResult<(SocketAddr, Message)> {
-    let mut buf = vec![0; 6];
+    let mut buf = vec![0; 18];
     let (_, from) = socket.recv_from(&mut buf)?;
     let msg = unpack_message(&buf)?;
 
@@ -73,7 +73,10 @@ fn pack_message(msg: &Message) -> Vec<u8> {
     let action_rep = cast_action(&msg.action);
     buf.push(action_rep);
 
-    buf.append(&mut msg.tx.to_le_bytes().to_vec());
+    buf.append(&mut msg.tx.id.to_le_bytes().to_vec());
+    buf.append(&mut msg.tx.cbu.to_le_bytes().to_vec());
+    buf.append(&mut msg.tx.airline_cost.to_le_bytes().to_vec());
+    buf.append(&mut msg.tx.hotel_cost.to_le_bytes().to_vec());
 
     buf
 }
@@ -94,7 +97,12 @@ fn unpack_message(buf: &[u8]) -> BoxResult<Message> {
         _ => return Err(format!("Unknown action ({}) from entity {}", buf[1], buf[0]).into()),
     };
 
-    let tx = u32::from_le_bytes(buf[2..6].try_into()?);
+    let tx = Transaction {
+        id: u32::from_le_bytes(buf[2..6].try_into()?),
+        cbu: u32::from_le_bytes(buf[6..10].try_into()?),
+        airline_cost: u32::from_le_bytes(buf[10..14].try_into()?),
+        hotel_cost: u32::from_le_bytes(buf[14..18].try_into()?)
+    };
 
     Ok(Message { from, action, tx })
 }

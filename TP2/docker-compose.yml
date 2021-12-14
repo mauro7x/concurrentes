@@ -42,6 +42,8 @@ services:
       - ./config/bank.env
     environment:
       - PORT=${SERVICE_PORT}
+    volumes:
+      - ./.tmp:/usr/app/.tmp
 
   hotel:
     build: ./services/generic-service
