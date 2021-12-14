@@ -64,6 +64,7 @@ impl DataPlane {
     }
 
     pub fn process_transaction(&mut self) -> BoxResult<bool> {
+        println!("payments_file: {}", PAYMENTS_TO_PROCESS);
         let mut payments_file = csv::Reader::from_path(PAYMENTS_TO_PROCESS)?;
 
         let mut iter = payments_file.deserialize();
@@ -111,11 +112,11 @@ impl DataPlane {
         Ok(())
     }
 
-    fn broadcast_message(&mut self, tx: Tx, action: Action) -> BoxResult<()> {
+    fn broadcast_message(&mut self, tx: &Transaction, action: Action) -> BoxResult<()> {
         let msg = Message {
             from: Entity::AlGlobo,
             action,
-            tx,
+            tx: *tx, // copy
         };
 
         self.services.broadcast(&self.socket, msg)
@@ -145,10 +146,10 @@ impl DataPlane {
         }
     }
 
-    fn broadcast_message_and_wait(&mut self, tx: Tx, action: Action) -> BoxResult<Option<Action>> {
+    fn broadcast_message_and_wait(&mut self, tx: &Transaction, action: Action) -> BoxResult<Option<Action>> {
         self.reset_responses()?;
         self.broadcast_message(tx, action)?;
-        self.wait_all_responses(tx, action)
+        self.wait_all_responses(tx.id, action)
     }
 
     fn wait_all_responses(&mut self, tx: Tx, expected_action: Action) -> BoxResult<Option<Action>> {
@@ -203,14 +204,13 @@ impl DataPlane {
     }
 
     fn process_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
-        // TODO: ESTADO COMPARTIDO
         match self.tx_log.get(&tx.id)? {
             Some(Action::Commit) => self.commit_tx(tx.id),
             Some(Action::Abort) => self.abort_tx(tx.id),
             Some(Action::Prepare) | None => {
-                match self.prepare_tx(tx.id)? {
-                    Action::Prepare => self.commit_tx(tx.id),
-                    Action::Abort => self.abort_tx(tx.id),
+                match self.prepare_tx(tx)? {
+                    Action::Prepare => self.commit_tx(tx),
+                    Action::Abort => self.abort_tx(tx),
                     // commit should never be returned
                     Action::Commit => {
                         panic!("process_tx: prepare returned commit as response action")
@@ -220,13 +220,13 @@ impl DataPlane {
         }
     }
 
-    fn commit_tx(&mut self, tx: Tx) -> BoxResult<Action> {
-        self.tx_log.insert(tx, Action::Commit)?;
+    fn commit_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
+        self.tx_log.insert(tx.id, Action::Commit)?;
         self.broadcast_until_getting_response_from_all_services(tx, Action::Commit, None)
     }
 
-    fn abort_tx(&mut self, tx: Tx) -> BoxResult<Action> {
-        self.tx_log.insert(tx, Action::Abort)?;
+    fn abort_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
+        self.tx_log.insert(tx.id, Action::Abort)?;
         self.broadcast_until_getting_response_from_all_services(tx, Action::Abort, None)
     }
 
