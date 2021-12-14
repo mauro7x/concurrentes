@@ -35,7 +35,6 @@ pub struct DataPlane {
     tx_log: TxLog,
     services: ServiceDirectory,
     threads: Vec<SafeThread>,
-    retry_file: Writer<File>,
 }
 
 impl DataPlane {
@@ -52,11 +51,6 @@ impl DataPlane {
         let responses = DataPlane::create_responses();
 
         println!("[DEBUG] (Data) Creating and binding socket...");
-        let file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(PAYMENTS_TO_RETRY)
-            .unwrap();
 
         let mut ret = DataPlane {
             responses: Arc::new(Shared::new(responses)),
@@ -64,7 +58,6 @@ impl DataPlane {
             tx_log: TxLog::new()?,
             services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr),
             threads: Vec::new(),
-            retry_file: csv::Writer::from_writer(file),
         };
 
         println!("[DEBUG] (Data) Starting Receiver...");
@@ -97,7 +90,7 @@ impl DataPlane {
                     match self.prepare_tx(&tx)? {
                         Action::Prepare => self.commit_tx(&tx)?,
                         Action::Abort => {
-                            self.update_ret_files(&byte_record)?;
+                            self.update_ret_file(&byte_record)?;
                             self.abort_tx(&tx)?
                         }
                         // commit should never be returned
@@ -135,9 +128,28 @@ impl DataPlane {
         Ok(())
     }
 
-    fn update_ret_files(&mut self, payments_file: &ByteRecord) -> BoxResult<()> {
-        self.retry_file.write_byte_record(payments_file)?;
-        self.retry_file.flush()?;
+    fn update_ret_file(&mut self, byte_record: &ByteRecord) -> BoxResult<()> {
+        let file = OpenOptions::new()
+            .write(true)
+            .read(true)
+            .append(true)
+            .open(PAYMENTS_TO_RETRY)?;
+
+        let mut reader = csv::Reader::from_reader(&file);
+
+        let value: Transaction = byte_record.deserialize(None)?;
+
+        for record in reader.deserialize() {
+            let tx_to_retry: Transaction = record?;
+            if tx_to_retry.id == value.id {
+                return Ok(());
+            }
+        }
+
+        let mut wtr = csv::Writer::from_writer(&file);
+
+        wtr.write_byte_record(byte_record)?;
+
         Ok(())
     }
 
