@@ -41,14 +41,15 @@ pub struct DataPlane {
     current_tx: Arc<Mutex<Option<Tx>>>,
     responses: Arc<Shared<Responses>>,
     socket: UdpSocket,
-    tx_log: TxLog,
+    tx_log: Option<TxLog>,
+    is_manual: bool,
     services: ServiceDirectory,
     threads: Vec<SafeThread>,
     stopped: Arc<AtomicBool>,
 }
 
 impl DataPlane {
-    pub fn new() -> BoxResult<Self> {
+    pub fn new(is_manual: bool) -> BoxResult<Self> {
         debug!("Creating Config...");
         let Config {
             port,
@@ -66,11 +67,15 @@ impl DataPlane {
 
         let current_tx = Arc::new(Mutex::new(None));
 
+        let mut tx_log: Option<TxLog> = None;
+        if !is_manual { tx_log = Some(TxLog::new()?); };
+
         let mut ret = DataPlane {
             current_tx,
             responses: Arc::new(Shared::new(responses)),
             socket,
-            tx_log: TxLog::new()?,
+            tx_log,
+            is_manual,
             services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr),
             threads: Vec::new(),
             stopped: Arc::new(AtomicBool::new(false)),
@@ -93,7 +98,45 @@ impl DataPlane {
         Ok(())
     }
 
-    pub fn process_transaction(&mut self) -> BoxResult<bool> {
+    pub fn process_transaction(&mut self, tx: &Transaction, initial_action: Option<Action>, byte_record: Option<&ByteRecord>) -> BoxResult<()> {
+        self.set_current_tx(Some(tx.id))?;
+        match initial_action {
+            Some(Action::Commit) => self.commit_tx(tx)?,
+            Some(Action::Abort) => self.abort_tx(tx)?,
+            Some(Action::Prepare) | None => {
+                match self.prepare_tx(tx)? {
+                    Action::Prepare => self.commit_tx(tx)?,
+                    Action::Abort => {
+                        if !self.is_manual {
+                            self.update_ret_file(
+                    byte_record
+                                .ok_or("[CRITICAL] process_transaction: byte record not provided")?
+                            )?;
+                        }
+                        self.abort_tx(tx)?
+                    }
+                    // commit is returned from prepare only when the transaction had been successfully comitted before
+                    Action::Commit => println!("[tx {}] had been previously committed", tx.id),
+                    Action::Terminate => {
+                        return Err(
+                            "[ERROR] process_tx: prepare returned invalid terminate action"
+                                .into(),
+                        );
+                    }
+                };
+            },
+            Some(Action::Terminate) => {
+                return Err(
+                    "[ERROR] process_tx: invalid terminate action"
+                        .into(),
+                );
+            }
+        };
+        self.set_current_tx(None)?;
+        Ok(())
+    }
+
+    pub fn process_transaction_from_file(&mut self) -> BoxResult<bool> {
         let mut payments_file = csv::Reader::from_path(PAYMENTS_TO_PROCESS)?;
 
         let mut iter = payments_file.byte_records();
@@ -102,35 +145,21 @@ impl DataPlane {
             let byte_record = result?;
 
             let tx: Transaction = (&byte_record).deserialize(None)?;
-            self.set_current_tx(Some(tx.id))?;
             check_threads(&mut self.threads)?;
 
-            match self.tx_log.get(&tx.id)? {
-                Some(Action::Commit) => self.commit_tx(&tx)?,
-                Some(Action::Abort) => self.abort_tx(&tx)?,
-                Some(Action::Prepare) | None => {
-                    match self.prepare_tx(&tx)? {
-                        Action::Prepare => self.commit_tx(&tx)?,
-                        Action::Abort => {
-                            self.update_ret_file(&byte_record)?;
-                            self.abort_tx(&tx)?
-                        }
-                        // commit should never be returned
-                        Action::Commit => {
-                            return Err(
-                                "[ERROR] process_tx: prepare returned commit as response action"
-                                    .into(),
-                            );
-                        }
-                    };
-                }
-            };
+            let initial_action = self.tx_log
+                .as_mut()
+                .ok_or("[CRITICAL] proess_transaction_from_file: log was not created")?
+                .get(&tx.id)?;
+
+            self.process_transaction(&tx, initial_action, Some(&byte_record))?;
+
             self.update_payments_file(&mut payments_file)?;
-            self.set_current_tx(None)?;
 
             return Ok(true);
         }
 
+        // self.send_termination_to_services()?;
         Ok(false)
     }
 
@@ -182,6 +211,7 @@ impl DataPlane {
             responses: self.responses.clone(),
             socket: self.socket.try_clone()?,
             stopped: self.stopped.clone(),
+            is_manual: self.is_manual
         })
     }
 
@@ -215,8 +245,9 @@ impl DataPlane {
 
         while response.is_none() && (n_retries.is_none() || n_attempts < n_retries.unwrap()) {
             n_attempts += 1;
+
             info!(
-                "[tx {}] Broadcasting {:?} - {} attempt",
+                "[tx {}] Broadcasting {:?} - attempt #{}",
                 tx.id, action, n_attempts
             );
             response = self.broadcast_message_and_wait(tx, action)?;
@@ -234,7 +265,7 @@ impl DataPlane {
         action: Action,
     ) -> BoxResult<Option<Action>> {
         check_threads(&mut self.threads)?;
-        fail_randomly()?;
+        if !self.is_manual { fail_randomly()? };
         self.reset_responses()?;
         self.broadcast_message(tx, action)?;
         self.wait_all_responses(tx.id, action)
@@ -266,51 +297,71 @@ impl DataPlane {
     ) -> BoxResult<Action> {
         let mut response_action: Action = expected_action;
         let mut responses_str: String = String::from("");
+        let mut err: BoxResult<Action> = Ok(response_action);
 
         responses_guard.iter().for_each(|(entity, res)| {
             responses_str.push_str(&format!("{:?}: {:?}, ", entity, res));
             match res {
                 Some(action) if *action == expected_action => (),
                 // service responded with abort
-                Some(action) if *action == Action::Abort => response_action = Action::Abort,
+                Some(action) if *action == Action::Abort =>
+                    response_action = Action::Abort,
+                // we are retrying a committed (successful) transaction
+                Some(action) if *action == Action::Commit && expected_action == Action::Prepare =>
+                    response_action = Action::Commit,
+                // invalid case that should never occur
+                Some(action) =>
+                    err = Err(
+                        format!("process_result: invalid response from server: action: {:?} expected_action {:?}",
+                            action, expected_action).into()
+                    ),
                 // should never happen that a service did not respond, since we wait
                 // in the condition variable for all responses not being None
-                None => panic!("process_result: there is a None response that should not be"),
-                // invalid case that should never occur
-                Some(action) => panic!(
-          "process_result: invalid response from server: action: {:?} expected_action {:?}",
-          action, expected_action
-        ),
+                None => err = Err("process_result: there is a None response that should not be".into())
             };
         });
 
+        if err.is_err() { return err; }
+
         info!(
-            "[tx {}] All responses received.\nAction: {:?}\nResponses: [{}]\nResponse action: {:?}",
+            "[tx {}] All responses received. Action: {:?} Responses: [{}] Response action: {:?}",
+
             tx, expected_action, responses_str, response_action
         );
         Ok(response_action)
     }
 
+    fn log(&mut self, tx: Tx, action: Action) -> BoxResult<()> {
+        if self.is_manual { return Ok(()); };
+        self.tx_log.as_mut().ok_or("[CRITICAL] log_insert: log was not created")?.insert(tx, action)
+    }
+
     fn commit_tx(&mut self, tx: &Transaction) -> BoxResult<()> {
-        self.tx_log.insert(tx.id, Action::Commit)?;
+        self.log(tx.id, Action::Commit)?;
         self.broadcast_until_getting_response_from_all_services(tx, Action::Commit, None)?;
         Ok(())
     }
 
     fn abort_tx(&mut self, tx: &Transaction) -> BoxResult<()> {
-        self.tx_log.insert(tx.id, Action::Abort)?;
+        self.log(tx.id, Action::Abort)?;
         self.broadcast_until_getting_response_from_all_services(tx, Action::Abort, None)?;
         Ok(())
     }
 
     fn prepare_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
-        self.tx_log.insert(tx.id, Action::Prepare)?;
+        self.log(tx.id, Action::Prepare)?;
         self.broadcast_until_getting_response_from_all_services(
             tx,
             Action::Prepare,
             Some(N_PREPARE_RETRIES),
         )
     }
+
+    // fn send_termination_to_services(&mut self) -> BoxResult<()> {
+    //     println!("[INFO] Sending termination message to services");
+    //     let dummy_tx = Transaction { id: 0, cbu: 0, airline_cost: 0, hotel_cost: 0 };
+    //     self.broadcast_message(&dummy_tx, Action::Terminate)
+    // }
 
     // Abstract
 
@@ -343,12 +394,13 @@ struct DataPlaneReceiver {
     responses: Arc<Shared<Responses>>,
     socket: UdpSocket,
     stopped: Arc<AtomicBool>,
+    is_manual: bool,
 }
 
 impl DataPlaneReceiver {
     fn process_responses(&mut self) -> BoxResult<()> {
         while !self.stopped.load(Relaxed) {
-            fail_randomly()?;
+            if !self.is_manual { fail_randomly()?; };
             self.recv_msg()?;
         }
 

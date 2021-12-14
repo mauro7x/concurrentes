@@ -1,10 +1,9 @@
-// use serde::Deserialize;
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Action {
     Prepare,
     Commit,
     Abort,
+    Terminate
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

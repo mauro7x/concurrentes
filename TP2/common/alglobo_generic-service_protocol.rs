@@ -28,6 +28,7 @@ const HOTEL_REP: u8 = b'D';
 const COMMIT_REP: u8 = b'E';
 const PREPARE_REP: u8 = b'F';
 const ABORT_REP: u8 = b'G';
+const TERMINATE_REP: u8 = b'H';
 
 // ----------------------------------------------------------------------------
 // Public
@@ -37,6 +38,7 @@ pub fn cast_action_to_char(action: &Action) -> u8 {
         Action::Prepare => PREPARE_REP,
         Action::Commit => COMMIT_REP,
         Action::Abort => ABORT_REP,
+        Action::Terminate => TERMINATE_REP
     }
 }
 
@@ -45,6 +47,7 @@ pub fn cast_char_to_action(char: u8) -> BoxResult<Action> {
         COMMIT_REP => Ok(Action::Commit),
         PREPARE_REP => Ok(Action::Prepare),
         ABORT_REP => Ok(Action::Abort),
+        TERMINATE_REP => Ok(Action::Terminate),
         _ => Err(format!("Unknown action ({})", char).into()),
     }
 }
