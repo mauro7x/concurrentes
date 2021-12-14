@@ -1,3 +1,5 @@
+//! Manual service: Built for manual payment retries. DataPlane used underneath.
+
 use std::io::{self};
 
 use crate::{data_plane::DataPlane, types::common::BoxResult};
@@ -12,6 +14,7 @@ fn prompt() {
     );
 }
 
+/// Execute retry logic.
 pub fn run_manual_alglobo() -> BoxResult<()> {
     let mut data_plane = DataPlane::new(true)?;
 

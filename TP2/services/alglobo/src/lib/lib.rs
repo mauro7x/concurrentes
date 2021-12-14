@@ -1,16 +1,16 @@
 // Public
 pub mod constants;
-pub mod replica;
-pub mod types;
+pub mod control_plane;
+pub mod data_plane;
+pub mod directory;
 pub mod manual;
+pub mod replica;
+mod tx_log;
+pub mod types;
 
 // Private
 mod config;
-mod control_plane;
-mod data_plane;
-mod directory;
 mod protocol;
 mod service_directory;
 mod thread_utils;
-mod tx_log;
 mod utils;

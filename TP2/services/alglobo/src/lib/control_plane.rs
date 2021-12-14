@@ -1,3 +1,5 @@
+//! ControlPlane: Control logic for replica communication and leader election.
+
 use std::{
     io::ErrorKind,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket},
@@ -31,6 +33,11 @@ use crate::{
 use log::*;
 
 // ----------------------------------------------------------------------------
+
+/// Control Plane is the entity that will control de Alglobo's replica logic and communication
+/// with other replicas. An UDP socket is used underneath for network communication.
+/// A separate entity called Directory will handle communication with Directory service.
+/// Leader election and protocol with other services are handled in this logic layer.
 
 pub struct ControlPlane {
     port: u16,
