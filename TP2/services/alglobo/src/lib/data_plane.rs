@@ -28,6 +28,7 @@ use crate::{
         control::{SafeThread, Shared},
         data::{Action, Entity, Message, Responses, Transaction, Tx},
     },
+    utils::fail_randomly,
 };
 
 use csv::Reader;
@@ -170,6 +171,7 @@ impl DataPlane {
         action: Action,
     ) -> BoxResult<Option<Action>> {
         check_threads(&mut self.threads)?;
+        fail_randomly()?;
         self.reset_responses()?;
         self.broadcast_message(tx, action)?;
         self.wait_all_responses(tx.id, action)
@@ -300,6 +302,7 @@ struct DataPlaneReceiver {
 impl DataPlaneReceiver {
     fn process_responses(&mut self) -> BoxResult<()> {
         while !self.stopped.load(Relaxed) {
+            fail_randomly()?;
             self.recv_msg()?;
         }
 
