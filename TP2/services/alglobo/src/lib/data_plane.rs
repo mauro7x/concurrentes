@@ -115,21 +115,29 @@ impl DataPlane {
                             self.abort_tx(&tx)?
                         }
                         // commit should never be returned
-                        Action::Commit => {
+                        Action::Commit | Action::Terminate => {
                             return Err(
                                 "[ERROR] process_tx: prepare returned commit as response action"
                                     .into(),
                             );
                         }
                     };
+                },
+                Some(Action::Terminate) => {
+                    return Err(
+                        "[ERROR] process_tx: prepare returned commit as response action"
+                            .into(),
+                    );
                 }
-            };
+            }
+
             self.update_payments_file(&mut payments_file)?;
             self.set_current_tx(None)?;
 
             return Ok(true);
         }
 
+        // self.send_termination_to_services()?;
         Ok(false)
     }
 
@@ -312,6 +320,12 @@ impl DataPlane {
             Action::Prepare,
             Some(N_PREPARE_RETRIES),
         )
+    }
+
+    fn send_termination_to_services(&mut self) -> BoxResult<()> {
+        println!("[INFO] Sending termination message to services");
+        let dummy_tx = Transaction { id: 0, cbu: 0, airline_cost: 0, hotel_cost: 0 };
+        self.broadcast_message(&dummy_tx, Action::Terminate)
     }
 
     // Abstract
