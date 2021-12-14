@@ -190,12 +190,11 @@ impl Service {
     }
 
     fn commit_tx(&mut self, addr: &SocketAddr, req: &Message) -> BoxResult<()> {
-        match self.name {
-            Entity::Bank => self.bank
-            .as_mut()
-            .ok_or("prepare_tx: bank has not been initialized")?
-            .consume_resources(&req.tx)?,
-            _ => ()
+        if self.name == Entity::Bank {
+            self.bank
+                .as_mut()
+                .ok_or("prepare_tx: bank has not been initialized")?
+                .consume_resources(&req.tx)?;
         };
 
         self.log_and_respond(Action::Commit, addr, req)?;
@@ -204,12 +203,11 @@ impl Service {
     }
 
     fn abort_tx(&mut self, addr: &SocketAddr, req: &Message) -> BoxResult<()> {
-        match self.name {
-            Entity::Bank => self.bank
-            .as_mut()
-            .ok_or("prepare_tx: bank has not been initialized")?
-            .release_resources(&req.tx)?,
-            _ => ()
+        if self.name == Entity::Bank {
+            self.bank
+                .as_mut()
+                .ok_or("prepare_tx: bank has not been initialized")?
+                .release_resources(&req.tx)?;
         };
 
         self.log_and_respond(Action::Abort, addr, req)?;

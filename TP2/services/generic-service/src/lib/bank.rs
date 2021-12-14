@@ -30,7 +30,7 @@ impl Bank {
 
         for result in accounts_file.deserialize() {
             let record: AccountRecord = result?;
-            self.accounts_money.insert(record.cbu, record.money.try_into()?);
+            self.accounts_money.insert(record.cbu, record.money);
         }
 
         Ok(())
