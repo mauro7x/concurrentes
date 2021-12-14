@@ -1,5 +1,5 @@
 use std::{
-    sync::mpsc::{self, Sender, TryRecvError},
+    sync::mpsc::{self, TryRecvError},
     thread,
 };
 
@@ -11,28 +11,35 @@ use crate::{
 // ----------------------------------------------------------------------------
 
 pub fn safe_spawn<C: 'static, F: 'static>(
-    mut c: C,
+    c: C,
     f: F,
     threads: &mut Vec<SafeThread>,
 ) -> BoxResult<()>
 where
     C: std::marker::Send,
-    F: Fn(&mut C, Sender<String>) + std::marker::Send,
+    F: Fn(C) -> BoxResult<()> + std::marker::Send,
 {
     let (tx, rx) = mpsc::channel();
+    let joiner = thread::spawn(move || {
+        match f(c) {
+            Ok(_) => tx.send(THREAD_OK.to_string()),
+            Err(err) => tx.send(err.to_string()),
+        }
+        .unwrap();
+    });
+
     let safe_thread = SafeThread {
-        joiner: thread::spawn(move || {
-            f(&mut c, tx);
-        }),
+        joiner,
         channel: rx,
     };
-
     threads.push(safe_thread);
 
     Ok(())
 }
 
 pub fn check_threads(threads: &mut Vec<SafeThread>) -> BoxResult<()> {
+    let mut running_threads = vec![];
+
     while let Some(thread) = threads.pop() {
         match thread.channel.try_recv() {
             Ok(msg) => match msg.as_str() {
@@ -41,12 +48,14 @@ pub fn check_threads(threads: &mut Vec<SafeThread>) -> BoxResult<()> {
                 }
                 err => return Err(err.into()),
             },
-            Err(TryRecvError::Empty) => threads.push(thread),
+            Err(TryRecvError::Empty) => running_threads.push(thread),
             Err(TryRecvError::Disconnected) => {
                 return Err("Thread close its channel unexpectedly".into())
             }
         };
     }
+
+    *threads = running_threads;
 
     Ok(())
 }

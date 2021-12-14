@@ -1,13 +1,12 @@
 use std::{
     net::{Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket},
-    sync::{mpsc::Sender, Arc, Mutex, MutexGuard},
+    sync::{Arc, Mutex, MutexGuard},
     thread,
 };
 
 use crate::{
     config::control::Config,
     constants::{
-        control::THREAD_OK,
         errors::{CV_WAIT_ERROR, MUTEX_LOCK_ERROR},
         leader_election::{
             ELECTION_TIMEOUT, GET_LEADER_TIMEOUT, HEALTHCHECK_RETRIES, HEALTHCHECK_TIMEOUT,
@@ -350,17 +349,9 @@ impl Control {
         Ok(())
     }
 
-    // Receiver and handlers
+    // Active object methods (run in their own thread)
 
-    fn receiver(&mut self, channel: Sender<String>) {
-        match self.inner_receiver() {
-            Ok(_) => channel.send(THREAD_OK.to_string()),
-            Err(err) => channel.send(err.to_string()),
-        }
-        .unwrap();
-    }
-
-    fn inner_receiver(&mut self) -> BoxResult<()> {
+    fn receiver(mut self) -> BoxResult<()> {
         let mut message: Message = NEW_MESSAGE;
 
         loop {
@@ -378,6 +369,8 @@ impl Control {
             };
         }
     }
+
+    // Handlers
 
     fn handle_ping(&self, from: SocketAddr) -> BoxResult<()> {
         println!(
