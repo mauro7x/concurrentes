@@ -13,6 +13,8 @@ use crate::{
     },
 };
 
+use log::*;
+
 pub struct TxLog {
     file: File,
     in_memory_log: HashMap<Tx, Action>,
@@ -43,8 +45,8 @@ impl TxLog {
             None => {
                 if let Some((logged_tx, logged_action)) = self.read_log()? {
                     if logged_tx == *tx {
-                        println!(
-                            "[INFO] State recovered from file! Congrats, it works \n
+                        info!(
+                            "State recovered from file! Congrats, it works \n
                         Transaction: {}, Action: {:?}",
                             logged_tx, logged_action
                         );

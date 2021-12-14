@@ -28,6 +28,8 @@ use crate::{
     utils::fail_randomly,
 };
 
+use log::*;
+
 // ----------------------------------------------------------------------------
 
 pub struct ControlPlane {
@@ -43,21 +45,18 @@ pub struct ControlPlane {
 
 impl ControlPlane {
     pub fn new() -> BoxResult<Self> {
-        println!("[DEBUG] (ID: -) (Control) Creating Config...");
+        debug!("(ID: -) Creating Config...");
         let Config {
             port,
             directory_addr,
         } = Config::new()?;
 
-        println!("[DEBUG] (ID: -) Creating Directory...");
+        debug!("(ID: -) Creating Directory...");
         let directory = Directory::new(directory_addr)?;
         let id = directory.get_my_id();
         fail_randomly()?;
 
-        println!(
-            "[DEBUG] (ID: {}) (Control) Creating and binding socket...",
-            id
-        );
+        debug!("(ID: {}) Creating and binding socket...", id);
         let socket = UdpSocket::bind(format!("0.0.0.0:{}", port))?;
         socket.set_nonblocking(true)?;
 
@@ -74,7 +73,7 @@ impl ControlPlane {
 
         ret.init_leader()?;
 
-        println!("[DEBUG] (ID: {}) (Control) Starting Receiver...", id);
+        debug!("(ID: {}) Starting Receiver...", id);
         let cloned = ret.clone()?;
         safe_spawn(cloned, Self::receiver, &mut ret.threads)?;
 
@@ -99,19 +98,13 @@ impl ControlPlane {
         fail_randomly()?;
 
         while !self.am_i_leader()? {
-            println!(
-                "[INFO] (ID: {}) (Control) Sending healthcheck to leader...",
-                self.id
-            );
+            info!("(ID: {}) Sending healthcheck to leader...", self.id);
 
             if self.is_leader_alive(&healthcheck_socket)? {
-                println!("[INFO] (ID: {}) (Control) Leader is alive!", self.id);
+                info!("(ID: {}) Leader is alive!", self.id);
                 thread::sleep(REPLICA_SLEEP_TIME);
             } else {
-                println!(
-                    "[INFO] (ID: {}) (Control) Leader not responding, start election",
-                    self.id
-                );
+                info!("(ID: {}) Leader not responding, start election", self.id);
                 self.find_new_leader()?;
             }
         }
@@ -122,10 +115,7 @@ impl ControlPlane {
     pub fn finish(&self) -> BoxResult<()> {
         // When there is no more work to do...
         if let Err(err) = self.directory()?.finish() {
-            println!(
-                "[WARN] (ID: {}) (Control) Error while finishing Directory: {}",
-                self.id, err
-            );
+            warn!("(ID: {}) Error while finishing Directory: {}", self.id, err);
         };
 
         Ok(())
@@ -153,10 +143,7 @@ impl ControlPlane {
     }
 
     fn init_leader(&mut self) -> BoxResult<()> {
-        println!(
-            "[INFO] (ID: {}) (Control) Finding current leader...",
-            self.id
-        );
+        info!("(ID: {}) Finding current leader...", self.id);
         let unshared_socket = UdpSocket::bind("0.0.0.0:0")?;
 
         {
@@ -167,10 +154,7 @@ impl ControlPlane {
             if nodes.is_empty() {
                 // I am the only node in the network,
                 // make myself leader without asking
-                println!(
-                    "[INFO] (ID: {}) (Control) No more nodes found, starting as leader",
-                    self.id
-                );
+                info!("(ID: {}) No more nodes found, starting as leader", self.id);
                 self.set_new_leader(self.id)?;
                 return Ok(());
             }
@@ -186,17 +170,14 @@ impl ControlPlane {
             let [opcode, id] = message;
             match opcode {
                 LEADER => {
-                    println!(
-                        "[INFO] (ID: {}) (Control) Found leader with ID: {}",
-                        self.id, id
-                    );
+                    info!("(ID: {}) Found leader with ID: {}", self.id, id);
                     self.set_new_leader(id)?;
                 }
                 _ => return Err("Unknown response to GET_LEADER received".into()),
             }
         } else {
-            println!(
-                "[WARN] (ID: {}) (Control) Nobody responded, announcing myself as leader",
+            warn!(
+                "(ID: {}) Nobody responded, announcing myself as leader",
                 self.id
             );
             self.make_me_leader()?;
@@ -212,7 +193,7 @@ impl ControlPlane {
             return Ok(());
         };
 
-        println!("[INFO] (ID: {}) (Control) Finding new leader", self.id);
+        info!("(ID: {}) Finding new leader", self.id);
         self.set_shared_value(self.got_ok.clone(), false)?;
         self.set_shared_value(self.leader_id.clone(), None)?;
 
@@ -246,10 +227,7 @@ impl ControlPlane {
     }
 
     fn send_election(&self) -> BoxResult<bool> {
-        println!(
-            "[INFO] (ID: {}) (Control) Broadcasting election message",
-            self.id
-        );
+        info!("(ID: {}) Broadcasting election message", self.id);
 
         let msg = self.msg_with_id(ELECTION);
         let mut directory = self.directory()?;
@@ -268,7 +246,7 @@ impl ControlPlane {
     }
 
     fn make_me_leader(&mut self) -> BoxResult<()> {
-        println!("[INFO] (ID: {}) (Control) Announcing as leader", self.id);
+        info!("(ID: {}) Announcing as leader", self.id);
         let msg = self.msg_with_id(LEADER);
         let mut directory = self.directory()?;
         let nodes = directory.get_updated_nodes()?;
@@ -401,18 +379,15 @@ impl ControlPlane {
     }
 
     fn handle_ping(&self, from: SocketAddr) -> BoxResult<()> {
-        println!(
-            "[DEBUG] (ID: {}) (Control:Receiver) PING from {}",
-            self.id, from
-        );
+        debug!("(ID: {}) (Control:Receiver) PING from {}", self.id, from);
         self.socket.send_to(&[OK], from)?;
 
         Ok(())
     }
 
     fn handle_ok(&mut self, from: SocketAddr, id: Id) -> BoxResult<()> {
-        println!(
-            "[DEBUG] (ID: {}) (Control:Receiver) OK from {} (ID: {})",
+        debug!(
+            "(ID: {}) (Control:Receiver) OK from {} (ID: {})",
             self.id, from, id
         );
         self.set_shared_value(self.got_ok.clone(), true)?;
@@ -422,8 +397,8 @@ impl ControlPlane {
     }
 
     fn handle_election(&mut self, from: SocketAddr, id: Id) -> BoxResult<()> {
-        println!(
-            "[DEBUG] (ID: {}) (Control:Receiver) ELECTION from {} (ID: {})",
+        debug!(
+            "(ID: {}) (Control:Receiver) ELECTION from {} (ID: {})",
             self.id, from, id
         );
         if id > self.id {
@@ -439,8 +414,8 @@ impl ControlPlane {
     }
 
     fn handle_leader(&mut self, from: SocketAddr, id: Id) -> BoxResult<()> {
-        println!(
-            "[DEBUG] (ID: {}) (Control:Receiver) LEADER from {} (ID: {})",
+        debug!(
+            "(ID: {}) (Control:Receiver) LEADER from {} (ID: {})",
             self.id, from, id
         );
         self.set_new_leader(id)?;
@@ -449,8 +424,8 @@ impl ControlPlane {
     }
 
     fn handle_get_leader(&mut self, from: SocketAddr, id: Id) -> BoxResult<()> {
-        println!(
-            "[DEBUG] (ID: {}) (Control:Receiver) GET_LEADER from {} (ID: {})",
+        debug!(
+            "(ID: {}) (Control:Receiver) GET_LEADER from {} (ID: {})",
             self.id, from, id
         );
         if self.am_i_leader()? {
@@ -461,8 +436,8 @@ impl ControlPlane {
     }
 
     fn handle_invalid(&self, from: SocketAddr, id: Id) -> BoxResult<()> {
-        println!(
-            "[WARN] (ID: {}) (Control:Receiver) Unknown from {} (ID: {}), ignoring",
+        warn!(
+            "(ID: {}) (Control:Receiver) Unknown from {} (ID: {}), ignoring",
             self.id, from, id
         );
 
@@ -472,11 +447,11 @@ impl ControlPlane {
 
 impl Drop for ControlPlane {
     fn drop(&mut self) {
-        println!("[DEBUG] (ID: {}) (Control) Destroying...", self.id);
+        debug!("(ID: {}) Destroying...", self.id);
         self.stopped.store(true, Relaxed);
         while let Some(thread) = self.threads.pop() {
             thread.joiner.join().expect("Error joining threads");
         }
-        println!("[DEBUG] (ID: {}) (Control) Destroyed successfully", self.id);
+        debug!("(ID: {}) Destroyed successfully", self.id);
     }
 }

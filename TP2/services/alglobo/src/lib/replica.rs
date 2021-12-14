@@ -5,6 +5,8 @@ use crate::{
     utils::fail_randomly,
 };
 
+use log::*;
+
 // ----------------------------------------------------------------------------
 
 pub struct Replica {
@@ -14,22 +16,22 @@ pub struct Replica {
 
 impl Replica {
     pub fn new() -> BoxResult<Self> {
-        println!("[DEBUG] (ID: -) (Replica) Creating Control...");
+        debug!("(ID: -) (Replica) Creating Control...");
         let control = ControlPlane::new()?;
         let id = control.get_my_id()?;
         fail_randomly()?;
 
         let ret = Replica { id, control };
-        println!("[DEBUG] (ID: {}) (Replica) Created successfully", id);
+        debug!("(ID: {}) (Replica) Created successfully", id);
 
         Ok(ret)
     }
 
     pub fn run(&mut self) -> BoxResult<()> {
-        println!("[INFO] (ID: {}) Replica started", self.id);
+        info!("(ID: {}) Replica started", self.id);
         self.inner_run()?;
         self.control.finish()?;
-        println!("[INFO] (ID: {}) Terminated gracefully", self.id);
+        info!("(ID: {}) Terminated gracefully", self.id);
 
         Ok(())
     }

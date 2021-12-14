@@ -4,8 +4,6 @@ use std::{
     thread, time,
 };
 
-use rand::{thread_rng, Rng};
-
 use crate::{
     bank::Bank,
     config::Config,
@@ -15,6 +13,9 @@ use crate::{
         data::{Action, Entity, Message, Transaction, Tx},
     },
 };
+
+use log::{debug, info};
+use rand::{thread_rng, Rng};
 
 // ----------------------------------------------------------------------------
 
@@ -29,7 +30,7 @@ pub struct Service {
 
 impl Service {
     pub fn new() -> BoxResult<Self> {
-        println!("[DEBUG] Creating Config...");
+        debug!("Creating Config...");
         let Config {
             name,
             port,
@@ -37,7 +38,7 @@ impl Service {
             response_time_ms,
         } = Config::new()?;
 
-        println!("[DEBUG] Creating entity...");
+        debug!("Creating entity...");
         let bank: Option<Bank>;
         let entity = match name.as_str() {
             "airline" => {
@@ -55,7 +56,7 @@ impl Service {
             _ => return Err(format!("Unknown entity name ({})", name).into()),
         };
 
-        println!("[DEBUG] Creating and binding socket...");
+        debug!("Creating and binding socket...");
         let ret = Self {
             name: entity,
             socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
@@ -65,7 +66,7 @@ impl Service {
             bank,
         };
 
-        println!("[DEBUG] Service created successfully");
+        debug!("Service created successfully");
 
         Ok(ret)
     }
@@ -88,7 +89,7 @@ impl Service {
 
             // Action has been already processed
             (Some(logged_action), req_action) if (*logged_action == req_action) => {
-                println!(
+                info!(
                     "[tx {}] Resending already processed response for action {:?}",
                     req.tx.id, req.action
                 );
@@ -97,13 +98,13 @@ impl Service {
 
             // Retrying an aborted transaction
             (Some(Action::Abort), Action::Prepare) => {
-                println!("[tx {}] Retrying previously aborted transaction", req.tx.id);
+                info!("[tx {}] Retrying previously aborted transaction", req.tx.id);
                 self.prepare_tx(&from, &req)
             }
 
             // Retrying a previously committed transaction -> do nothing and resend status
             (Some(Action::Commit), Action::Prepare) => {
-                println!("[tx {}] Transaction has already been committed", req.tx.id);
+                info!("[tx {}] Transaction has already been committed", req.tx.id);
                 self.respond_message(&from, &req.tx, Action::Commit)
             }
 
@@ -113,7 +114,7 @@ impl Service {
                 // Abort transaction but do NOT release resources,
                 // since they were not reserved
                 self.tx_log.insert(req.tx.id, Action::Abort);
-                println!("[tx {}] Aborting new transaction", req.tx.id);
+                info!("[tx {}] Aborting new transaction", req.tx.id);
                 self.respond_message(&from, &req.tx, Action::Abort)
             }
 
@@ -136,13 +137,13 @@ impl Service {
         addr: &SocketAddr,
         req: &Message,
     ) -> BoxResult<()> {
-        println!(
+        debug!(
             "[tx {}] Inserting <{:?}> action in log...",
             req.tx.id, action
         );
         self.tx_log.insert(req.tx.id, action);
 
-        println!(
+        info!(
             "[tx {}] Responding with action <{:?}>...",
             req.tx.id, action
         );

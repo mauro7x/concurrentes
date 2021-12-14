@@ -2,6 +2,10 @@ use std::{thread::sleep, time::Duration};
 
 use lib::{replica::Replica, types::common::BoxResult};
 
+extern crate pretty_env_logger;
+#[macro_use]
+extern crate log;
+
 // ----------------------------------------------------------------------------
 
 pub const RESTART_TIME: Duration = Duration::from_secs(10);
@@ -9,8 +13,13 @@ pub const RESTART_TIME: Duration = Duration::from_secs(10);
 // ----------------------------------------------------------------------------
 
 fn run() -> BoxResult<()> {
+    debug!("Creating...");
     let mut replica = Replica::new()?;
+
+    debug!("Running...");
     replica.run()?;
+
+    debug!("Terminated gracefully");
 
     Ok(())
 }
@@ -20,11 +29,13 @@ fn hard_work_to_restart_our_complex_system() {
 }
 
 fn main() {
-    while let Err(err) = run() {
-        println!("[ERROR] Replica crashed with error: {}", err);
+    pretty_env_logger::init();
 
-        println!("[INFO] Restarting...");
+    while let Err(err) = run() {
+        error!("Replica crashed with error: {}", err);
+
+        info!("Restarting...");
         hard_work_to_restart_our_complex_system();
-        println!("[INFO] Restarted successfully");
+        info!("Restarted successfully");
     }
 }
