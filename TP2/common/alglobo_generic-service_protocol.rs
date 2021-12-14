@@ -48,7 +48,7 @@ pub fn send_msg_to(socket: &UdpSocket, msg: &Message, addr: &SocketAddr) -> BoxR
 }
 
 pub fn recv_msg(socket: &UdpSocket) -> BoxResult<(SocketAddr, Message)> {
-    let mut buf = vec![0; 21];
+    let mut buf = vec![0; 18];
     let (_, from) = socket.recv_from(&mut buf)?;
     let msg = unpack_message(&buf)?;
 
@@ -99,9 +99,9 @@ fn unpack_message(buf: &[u8]) -> BoxResult<Message> {
 
     let tx = Transaction {
         id: u32::from_le_bytes(buf[2..6].try_into()?),
-        cbu: u32::from_le_bytes(buf[7..11].try_into()?),
-        airline_cost: u32::from_le_bytes(buf[12..16].try_into()?),
-        hotel_cost: u32::from_le_bytes(buf[17..21].try_into()?)
+        cbu: u32::from_le_bytes(buf[6..10].try_into()?),
+        airline_cost: u32::from_le_bytes(buf[10..14].try_into()?),
+        hotel_cost: u32::from_le_bytes(buf[14..18].try_into()?)
     };
 
     Ok(Message { from, action, tx })

@@ -7,6 +7,7 @@ use std::{
 use rand::{thread_rng, Rng};
 
 use crate::{
+    bank::{Bank},
     config::Config,
     protocol::{recv_msg, send_msg_to},
     types::{
@@ -23,6 +24,7 @@ pub struct Service {
     failure_rate: f64,
     response_time_ms: u64,
     tx_log: HashMap<Tx, Action>,
+    bank: Option<Bank>
 }
 
 impl Service {
@@ -35,11 +37,21 @@ impl Service {
             response_time_ms,
         } = Config::new()?;
 
-        println!("[DEBUG] Crating entity...");
+        println!("[DEBUG] Creating entity...");
+        let bank: Option<Bank>;
         let entity = match name.as_str() {
-            "airline" => Entity::Airline,
-            "bank" => Entity::Bank,
-            "hotel" => Entity::Hotel,
+            "airline" => {
+                bank = None;
+                Entity::Airline
+            },
+            "bank" => {
+                bank = Some(Bank::new()?);
+                Entity::Bank
+            },
+            "hotel" => {
+                bank = None;
+                Entity::Hotel
+            },
             _ => return Err(format!("Unknown entity name ({})", name).into()),
         };
 
@@ -50,6 +62,7 @@ impl Service {
             failure_rate,
             response_time_ms,
             tx_log: HashMap::new(),
+            bank
         };
 
         println!("[DEBUG] Service created successfully");
@@ -161,21 +174,44 @@ impl Service {
             return self.abort_tx(addr, req);
         }
 
-        // TODO: If Bank, reserve resources
-        self.log_and_respond(Action::Prepare, addr, req)?;
+        let action_taken = match self.name {
+            Entity::Bank =>
+                self.bank
+                    .as_mut()
+                    .ok_or("prepare_tx: bank has not been initialized")?
+                    .reserve_resources(&req.tx),
+            Entity::Airline | Entity::Hotel => Ok(Action::Prepare),
+            _ => Err("prepare_tx: unknown entity".into())
+        }?;
+
+        self.log_and_respond(action_taken, addr, req)?;
 
         Ok(())
     }
 
     fn commit_tx(&mut self, addr: &SocketAddr, req: &Message) -> BoxResult<()> {
-        // TODO: If Bank, remove resources
+        match self.name {
+            Entity::Bank => self.bank
+            .as_mut()
+            .ok_or("prepare_tx: bank has not been initialized")?
+            .consume_resources(&req.tx)?,
+            _ => ()
+        };
+
         self.log_and_respond(Action::Commit, addr, req)?;
 
         Ok(())
     }
 
     fn abort_tx(&mut self, addr: &SocketAddr, req: &Message) -> BoxResult<()> {
-        // TODO: If Bank, restore resources
+        match self.name {
+            Entity::Bank => self.bank
+            .as_mut()
+            .ok_or("prepare_tx: bank has not been initialized")?
+            .release_resources(&req.tx)?,
+            _ => ()
+        };
+
         self.log_and_respond(Action::Abort, addr, req)?;
 
         Ok(())
