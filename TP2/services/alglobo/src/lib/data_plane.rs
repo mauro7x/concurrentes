@@ -113,7 +113,7 @@ impl DataPlane {
 
     // Private
     fn update_payments_file(&mut self, payments_file: &mut Reader<File>) -> BoxResult<()> {
-        let mut wtr = csv::Writer::from_path(TEMP_PAYMENTS_TO_PROCESS)?;
+        let mut wtr = Writer::from_path(TEMP_PAYMENTS_TO_PROCESS)?;
 
         wtr.write_record(payments_file.byte_headers()?)?;
 
@@ -135,7 +135,7 @@ impl DataPlane {
             .append(true)
             .open(PAYMENTS_TO_RETRY)?;
 
-        let mut reader = csv::Reader::from_reader(&file);
+        let mut reader = Reader::from_reader(&file);
 
         let value: Transaction = byte_record.deserialize(None)?;
 
@@ -146,7 +146,7 @@ impl DataPlane {
             }
         }
 
-        let mut wtr = csv::Writer::from_writer(&file);
+        let mut wtr = Writer::from_writer(&file);
 
         wtr.write_byte_record(byte_record)?;
 
