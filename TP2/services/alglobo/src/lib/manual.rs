@@ -1,16 +1,18 @@
 use std::io::{self};
 
-use crate::{types::{common::BoxResult}, data_plane::DataPlane};
+use crate::{data_plane::DataPlane, types::common::BoxResult};
 
 // ----------------------------------------------------------------------------
 
 fn prompt() {
     let expected_format = "tx_id,cbu,airline_cost,hotel_cost";
-    println!("\nPlease enter the transaction to retry: (format: {})\n", expected_format);
+    println!(
+        "\nPlease enter the transaction to retry: (format: {})\n",
+        expected_format
+    );
 }
 
 pub fn run_manual_alglobo() -> BoxResult<()> {
-
     let mut data_plane = DataPlane::new(true)?;
 
     let mut rdr = csv::ReaderBuilder::new()
@@ -23,8 +25,8 @@ pub fn run_manual_alglobo() -> BoxResult<()> {
             Ok(tx) => {
                 println!("{:?}", tx);
                 data_plane.process_transaction(&tx, None, None)?;
-            },
-            Err(_) => println!("error: invalid input.")
+            }
+            Err(_) => println!("Error: invalid input."),
         }
         prompt();
     }
