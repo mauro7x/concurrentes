@@ -1,10 +1,9 @@
 use std::{
     collections::HashMap,
     net::Ipv4Addr,
-    sync::{Condvar, Mutex},
+    sync::{mpsc::Receiver, Condvar, Mutex},
+    thread::JoinHandle,
 };
-
-// ----------------------------------------------------------------------------
 
 use crate::types::common::Id;
 
@@ -30,4 +29,9 @@ impl<T> Shared<T> {
 pub struct Node {
     pub id: Id,
     pub ip: Ipv4Addr,
+}
+
+pub struct SafeThread {
+    pub joiner: JoinHandle<()>,
+    pub channel: Receiver<String>,
 }

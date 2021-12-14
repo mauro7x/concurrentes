@@ -35,25 +35,19 @@ impl Replica {
     // Private
 
     fn inner_run(&mut self) -> BoxResult<()> {
-        loop {
+        let mut finished = false;
+        while !finished {
             if self.control.am_i_leader()? {
-                self.run_as_leader()?;
-                break;
-                // TODO: detect when there
-                // is not more work to do
-                // and finish gracefully
+                finished = self.run_as_leader()?;
             } else {
                 self.control.healthcheck_leader()?;
             }
         }
 
-        // TEMP:
         Ok(())
     }
 
-    fn run_as_leader(&self) -> BoxResult<()> {
-        // let mut failed_requests_logger = FileLogger::new(failed_reqs_filename);
-
+    fn run_as_leader(&mut self) -> BoxResult<bool> {
         let mut data_plane = DataPlane::new()?;
         let mut transactions_pending = true;
 
@@ -61,11 +55,6 @@ impl Replica {
             transactions_pending = data_plane.process_transaction()?;
         }
 
-        // TODO: differentiate if we leave because
-        // we are not leaders anymore of
-        // because there is no more job to do
-        // (¿maybe using a bool ret value?)
-
-        Ok(())
+        Ok(!transactions_pending)
     }
 }
