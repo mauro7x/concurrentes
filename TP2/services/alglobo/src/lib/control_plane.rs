@@ -5,6 +5,7 @@ use std::{
     net::{Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket},
     sync::{
         atomic::{AtomicBool, Ordering::Relaxed},
+        mpsc::{self},
         Arc, Mutex, MutexGuard,
     },
     thread,
@@ -13,6 +14,7 @@ use std::{
 use crate::{
     config::control::Config,
     constants::{
+        control::THREAD_OK,
         errors::{CV_WAIT_ERROR, MUTEX_LOCK_ERROR},
         general::NONBLOCKING_POLLING_RATE,
         leader_election::{
@@ -320,21 +322,30 @@ impl ControlPlane {
             .is_none())
     }
 
-    fn get_leader_id(&self) -> BoxResult<Id> {
-        let id = self
-            .leader_id
-            .cv
-            .wait_while(
-                self.leader_id.mutex.lock().map_err(|_| MUTEX_LOCK_ERROR)?,
-                |leader_id| leader_id.is_none(),
-            )
-            .map_err(|_| CV_WAIT_ERROR)?
-            .ok_or("Leader ID is awkwardly none")?;
+    fn get_leader_id(&mut self) -> BoxResult<Id> {
+        loop {
+            if self.stopped.load(Relaxed) {
+                return Err("Service stopped".into());
+            }
+            check_threads(&mut self.threads)?;
 
-        Ok(id)
+            let (id, timeout) = self
+                .leader_id
+                .cv
+                .wait_timeout_while(
+                    self.leader_id.mutex.lock().map_err(|_| MUTEX_LOCK_ERROR)?,
+                    ELECTION_TIMEOUT,
+                    |leader_id| leader_id.is_none(),
+                )
+                .map_err(|_| CV_WAIT_ERROR)?;
+
+            if !timeout.timed_out() {
+                return Ok(id.ok_or("Leader ID is awkardly null")?);
+            }
+        }
     }
 
-    fn get_leader_addr(&self) -> BoxResult<Option<SocketAddr>> {
+    fn get_leader_addr(&mut self) -> BoxResult<Option<SocketAddr>> {
         let leader_id = self.get_leader_id()?;
         let mut directory = self.directory()?;
         directory.update()?;
@@ -430,14 +441,36 @@ impl ControlPlane {
         Ok(())
     }
 
+    fn inner_handle_get_leader(&mut self, from: SocketAddr) -> BoxResult<()> {
+        if self.am_i_leader()? {
+            self.socket.send_to(&self.msg_with_id(LEADER), from)?;
+        }
+
+        Ok(())
+    }
+
     fn handle_get_leader(&mut self, from: SocketAddr, id: Id) -> BoxResult<()> {
         debug!(
             "(ID: {}) (Control:Receiver) GET_LEADER from {} (ID: {})",
             self.id, from, id
         );
-        if self.am_i_leader()? {
-            self.socket.send_to(&self.msg_with_id(LEADER), from)?;
-        }
+
+        let mut cloned = self.clone()?;
+        let (tx, rx) = mpsc::channel();
+        let joiner = thread::spawn(move || {
+            match cloned.inner_handle_get_leader(from) {
+                Ok(_) => tx.send(THREAD_OK.to_string()),
+                Err(err) => tx.send(err.to_string()),
+            }
+            .unwrap();
+        });
+
+        let safe_thread = SafeThread {
+            joiner,
+            channel: rx,
+        };
+
+        self.threads.push(safe_thread);
 
         Ok(())
     }
