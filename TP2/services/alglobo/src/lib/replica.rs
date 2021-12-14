@@ -1,5 +1,5 @@
 use crate::{
-    control_plane::Control,
+    control_plane::ControlPlane,
     data_plane::DataPlane,
     types::common::{BoxResult, Id},
 };
@@ -8,13 +8,13 @@ use crate::{
 
 pub struct Replica {
     id: Id,
-    control: Control,
+    control: ControlPlane,
 }
 
 impl Replica {
     pub fn new() -> BoxResult<Self> {
         println!("[DEBUG] (ID: -) (Replica) Creating Control...");
-        let control = Control::new()?;
+        let control = ControlPlane::new()?;
         let id = control.get_my_id()?;
 
         let ret = Replica { id, control };

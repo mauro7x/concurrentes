@@ -24,7 +24,7 @@ use crate::{
 
 // ----------------------------------------------------------------------------
 
-pub struct Control {
+pub struct ControlPlane {
     port: u16,
     id: Id,
     socket: UdpSocket,
@@ -34,7 +34,7 @@ pub struct Control {
     threads: Vec<SafeThread>,
 }
 
-impl Control {
+impl ControlPlane {
     pub fn new() -> BoxResult<Self> {
         println!("[DEBUG] (ID: -) (Control) Creating Config...");
         let Config {
@@ -50,7 +50,7 @@ impl Control {
             "[DEBUG] (ID: {}) (Control) Creating and binding socket...",
             id
         );
-        let mut ret = Control {
+        let mut ret = Self {
             port,
             id,
             socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
