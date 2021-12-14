@@ -1,8 +1,8 @@
 // Public
 pub mod constants;
+pub mod manual;
 pub mod replica;
 pub mod types;
-pub mod manual;
 
 // Private
 mod config;

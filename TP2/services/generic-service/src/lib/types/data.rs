@@ -3,7 +3,7 @@ pub enum Action {
     Prepare,
     Commit,
     Abort,
-    Terminate
+    Terminate,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

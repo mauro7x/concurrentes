@@ -9,7 +9,7 @@ pub enum Action {
     Prepare,
     Commit,
     Abort,
-    Terminate // end services
+    Terminate, // end services
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

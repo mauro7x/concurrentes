@@ -38,7 +38,7 @@ pub fn cast_action_to_char(action: &Action) -> u8 {
         Action::Prepare => PREPARE_REP,
         Action::Commit => COMMIT_REP,
         Action::Abort => ABORT_REP,
-        Action::Terminate => TERMINATE_REP
+        Action::Terminate => TERMINATE_REP,
     }
 }
 
