@@ -1,3 +1,5 @@
+//! TxLog: Keep state for run transactions. Shared state implementation.
+
 use std::{
     collections::HashMap,
     fs::{File, OpenOptions},
@@ -14,6 +16,8 @@ use crate::{
 };
 
 use log::*;
+
+/// Wrapper built for in-memory state, if no transaction record is found then state lookup in file is performed.
 
 pub struct TxLog {
     file: File,

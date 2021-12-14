@@ -1,3 +1,5 @@
+//! DataPlane: Control logic for Alglobo.
+
 use std::{
     collections::HashMap,
     fs::{self, File, OpenOptions},
@@ -36,6 +38,11 @@ use csv::{ByteRecord, Reader, Writer};
 use log::*;
 
 // ----------------------------------------------------------------------------
+
+/// Data Plane is the entity that will control de Alglobo logic and communication
+/// with other services. An UDP socket is used underneath for network communication.
+/// A separate entity called DataPlaneReceiver will process incomming requests from
+/// external services in a separate thread.
 
 pub struct DataPlane {
     current_tx: Arc<Mutex<Option<Tx>>>,

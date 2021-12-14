@@ -1,3 +1,5 @@
+//! Directory: Handle communication with Directory service.
+
 use std::{
     collections::HashMap,
     io::{ErrorKind, Read, Write},
@@ -18,6 +20,10 @@ use crate::{
 use log::*;
 
 // ----------------------------------------------------------------------------
+
+/// Directory is an entity used by Data Control to keep track of living
+/// replicas for Alglobo. Communication will be handled undetneath with a
+/// TCP Socket.
 
 pub struct Directory {
     id: Id,
