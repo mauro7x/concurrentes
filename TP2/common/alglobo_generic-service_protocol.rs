@@ -56,6 +56,7 @@ pub fn send_msg_to(socket: &UdpSocket, msg: &Message, addr: &SocketAddr) -> BoxR
     Ok(sent)
 }
 
+#[allow(dead_code)]
 pub fn recv_msg(socket: &UdpSocket) -> BoxResult<(SocketAddr, Message)> {
     let mut buf = vec![0; 18];
     let (_, from) = socket.recv_from(&mut buf)?;
@@ -64,10 +65,7 @@ pub fn recv_msg(socket: &UdpSocket) -> BoxResult<(SocketAddr, Message)> {
     Ok((from, msg))
 }
 
-// ----------------------------------------------------------------------------
-// Private
-
-fn pack_message(msg: &Message) -> Vec<u8> {
+pub fn pack_message(msg: &Message) -> Vec<u8> {
     let mut buf = vec![];
 
     let from_rep = match &msg.from {
@@ -90,7 +88,7 @@ fn pack_message(msg: &Message) -> Vec<u8> {
     buf
 }
 
-fn unpack_message(buf: &[u8]) -> BoxResult<Message> {
+pub fn unpack_message(buf: &[u8]) -> BoxResult<Message> {
     let from = match buf[0] {
         AIRLINE_REP => Entity::Airline,
         ALGLOBO_REP => Entity::AlGlobo,
