@@ -15,24 +15,26 @@ use crate::{
     },
     directory::Directory,
     protocol::election::{Message, ELECTION, GET_LEADER, LEADER, NEW_MESSAGE, OK, PING},
+    thread_utils::{check_threads, safe_spawn},
     types::{
         common::{BoxResult, Id},
-        control::Shared,
+        control::{SafeThread, Shared},
     },
 };
 
 // ----------------------------------------------------------------------------
 
-pub struct Control {
+pub struct ControlPlane {
     port: u16,
     id: Id,
     socket: UdpSocket,
     directory: Arc<Mutex<Directory>>,
     leader_id: Arc<Shared<Option<Id>>>,
     got_ok: Arc<Shared<bool>>,
+    threads: Vec<SafeThread>,
 }
 
-impl Control {
+impl ControlPlane {
     pub fn new() -> BoxResult<Self> {
         println!("[DEBUG] (ID: -) (Control) Creating Config...");
         let Config {
@@ -48,20 +50,21 @@ impl Control {
             "[DEBUG] (ID: {}) (Control) Creating and binding socket...",
             id
         );
-        let mut ret = Control {
+        let mut ret = Self {
             port,
             id,
             socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
             directory: Arc::new(Mutex::new(directory)),
             leader_id: Arc::new(Shared::new(None)),
             got_ok: Arc::new(Shared::new(false)),
+            threads: Vec::new(),
         };
 
         ret.init_leader()?;
 
         println!("[DEBUG] (ID: {}) (Control) Starting Receiver...", id);
-        let mut clone = ret.clone()?;
-        thread::spawn(move || clone.receiver());
+        let cloned = ret.clone()?;
+        safe_spawn(cloned, Self::receiver, &mut ret.threads)?;
 
         Ok(ret)
     }
@@ -72,7 +75,9 @@ impl Control {
         Ok(id)
     }
 
-    pub fn am_i_leader(&self) -> BoxResult<bool> {
+    pub fn am_i_leader(&mut self) -> BoxResult<bool> {
+        check_threads(&mut self.threads)?;
+
         Ok(self.id == self.get_leader_id()?)
     }
 
@@ -123,6 +128,7 @@ impl Control {
             directory: self.directory.clone(),
             leader_id: self.leader_id.clone(),
             got_ok: self.got_ok.clone(),
+            threads: Vec::new(),
         };
 
         Ok(ret)
@@ -185,22 +191,19 @@ impl Control {
     }
 
     fn find_new_leader(&mut self) -> BoxResult<()> {
+        check_threads(&mut self.threads)?;
+
         if self.is_finding_leader()? {
             return Ok(());
         };
-        self.leader_election()?;
 
-        Ok(())
-    }
-
-    fn leader_election(&mut self) -> BoxResult<()> {
         println!("[INFO] (ID: {}) (Control) Finding new leader", self.id);
-
         self.set_shared_value(self.got_ok.clone(), false)?;
         self.set_shared_value(self.leader_id.clone(), None)?;
 
         // Bully algorithm:
         if !self.send_election()? || !self.got_ok_within_timeout()? {
+            check_threads(&mut self.threads)?;
             self.make_me_leader()?;
         } else {
             self.get_leader_id()?;
@@ -232,6 +235,7 @@ impl Control {
             "[INFO] (ID: {}) (Control) Broadcasting election message",
             self.id
         );
+
         let msg = self.msg_with_id(ELECTION);
         let mut directory = self.directory()?;
         let nodes = directory.get_updated_nodes()?;
@@ -263,11 +267,12 @@ impl Control {
         Ok(())
     }
 
-    fn is_leader_alive(&self, socket: &UdpSocket) -> BoxResult<bool> {
+    fn is_leader_alive(&mut self, socket: &UdpSocket) -> BoxResult<bool> {
         let mut attempts = 0;
         let mut recv_buf = [0; 1];
 
         loop {
+            check_threads(&mut self.threads)?;
             match self.get_leader_addr()? {
                 Some(leader_addr) => {
                     socket.send_to(&[PING], leader_addr)?;
@@ -346,17 +351,7 @@ impl Control {
 
     // Receiver and handlers
 
-    fn receiver(&mut self) {
-        if let Err(err) = self.inner_receiver() {
-            // TODO: Avoid this panic, propagate!
-            panic!(
-                "[ERROR] (ID: {}) (Control:Receiver) Crashed: {}",
-                self.id, err
-            )
-        };
-    }
-
-    fn inner_receiver(&mut self) -> BoxResult<()> {
+    fn receiver(&mut self) -> BoxResult<()> {
         let mut message: Message = NEW_MESSAGE;
 
         loop {
@@ -396,7 +391,7 @@ impl Control {
         Ok(())
     }
 
-    fn handle_election(&self, from: SocketAddr, id: Id) -> BoxResult<()> {
+    fn handle_election(&mut self, from: SocketAddr, id: Id) -> BoxResult<()> {
         println!(
             "[DEBUG] (ID: {}) (Control:Receiver) ELECTION from {} (ID: {})",
             self.id, from, id
@@ -405,14 +400,8 @@ impl Control {
             self.socket.send_to(&self.msg_with_id(OK), from)?;
 
             if !self.is_finding_leader()? {
-                let mut cloned = self.clone()?;
-                thread::spawn(move || {
-                    if let Err(err) = cloned.find_new_leader() {
-                        // TODO: Avoid this panic, propagate!
-                        panic!("[ERROR] find_new_leader inside thread crashed: {}", err)
-                    }
-                    println!("Finished thread :P");
-                });
+                let cloned = self.clone()?;
+                safe_spawn(cloned, Self::find_new_leader, &mut self.threads)?;
             }
         }
 

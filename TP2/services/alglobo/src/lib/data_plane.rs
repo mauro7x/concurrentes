@@ -3,7 +3,6 @@ use std::{
     fs::{self, File},
     net::UdpSocket,
     sync::{Arc, MutexGuard},
-    thread::{self},
 };
 
 use crate::{
@@ -16,10 +15,11 @@ use crate::{
     },
     protocol::data::recv_msg,
     service_directory::ServiceDirectory,
+    thread_utils::{check_threads, safe_spawn},
     tx_log::TxLog,
     types::{
         common::BoxResult,
-        control::Shared,
+        control::{SafeThread, Shared},
         data::{Action, Entity, Message, Responses, Transaction, Tx},
     },
 };
@@ -33,6 +33,7 @@ pub struct DataPlane {
     socket: UdpSocket,
     tx_log: TxLog,
     services: ServiceDirectory,
+    threads: Vec<SafeThread>,
 }
 
 impl DataPlane {
@@ -49,16 +50,22 @@ impl DataPlane {
         let responses = DataPlane::create_responses();
 
         println!("[DEBUG] (Data) Creating and binding socket...");
-        let ret = DataPlane {
+        let mut ret = DataPlane {
             responses: Arc::new(Shared::new(responses)),
             socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
             tx_log: TxLog::new()?,
             services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr),
+            threads: Vec::new(),
         };
 
         println!("[DEBUG] (Data) Starting Receiver...");
-        let mut receiver = ret.receiver()?;
-        thread::spawn(move || receiver.run());
+        let receiver = ret.receiver()?;
+        safe_spawn(
+            receiver,
+            DataPlaneReceiver::process_responses,
+            &mut ret.threads,
+        )?;
+        // thread::spawn(move || receiver.run());
 
         Ok(ret)
     }
@@ -77,6 +84,7 @@ impl DataPlane {
 
         Ok(false)
     }
+
     fn update_payments_file(&mut self, payments_file: &mut Reader<File>) -> BoxResult<()> {
         let mut wtr = csv::Writer::from_path(TEMP_PAYMENTS_TO_PROCESS)?;
 
@@ -145,7 +153,11 @@ impl DataPlane {
         }
     }
 
-    fn broadcast_message_and_wait(&mut self, tx: &Transaction, action: Action) -> BoxResult<Option<Action>> {
+    fn broadcast_message_and_wait(
+        &mut self,
+        tx: &Transaction,
+        action: Action,
+    ) -> BoxResult<Option<Action>> {
         self.reset_responses()?;
         self.broadcast_message(tx, action)?;
         self.wait_all_responses(tx.id, action)
@@ -203,6 +215,9 @@ impl DataPlane {
     }
 
     fn process_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
+        check_threads(&mut self.threads)?;
+
+        // TODO: ESTADO COMPARTIDO
         match self.tx_log.get(&tx.id)? {
             Some(Action::Commit) => self.commit_tx(tx),
             Some(Action::Abort) => self.abort_tx(tx),
@@ -259,13 +274,6 @@ struct DataPlaneReceiver {
 }
 
 impl DataPlaneReceiver {
-    fn run(&mut self) {
-        if let Err(err) = self.process_responses() {
-            // TODO: Avoid this panic, propagate!
-            panic!("[ERROR] (Data) Crashed: {}", err)
-        };
-    }
-
     fn process_responses(&mut self) -> BoxResult<()> {
         loop {
             let res = match recv_msg(&self.socket) {
