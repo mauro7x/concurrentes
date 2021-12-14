@@ -34,17 +34,24 @@ function copy_build_dependencies {
   # Protocol: alglobo <-> directory
   cp ./common/alglobo_directory_protocol.rs ./services/alglobo/shared/alglobo_directory_protocol.rs &&
   cp ./common/alglobo_directory_protocol.rs ./services/directory/shared/alglobo_directory_protocol.rs
-
 }
 
 function copy_runtime_dependencies {
   # Payments source
-  # rm -rf ./.tmp &&
-  mkdir -p "./.tmp" &&
+  mkdir -p ./.tmp &&
   cp "${PAYMENTS_FILE}" ./.tmp/payments.csv &&
   cp "${ACCOUNTS_FILE}" ./.tmp/accounts.csv &&
   cp "${RETRY_PAYMENTS_FILE}" ./.tmp/retry_payments.csv 
 
+}
+
+function prepare_workspace {
+  rm -rf ./.tmp
+  copy_build_dependencies
+}
+
+function clean_workspace {
+  rm -rf ./.tmp
 }
 
 # Main script
@@ -62,8 +69,8 @@ echo -e "${FC}=${NC}            Santiago Klein            ${FC}=${NC}"
 echo -e "${FC}=${NC}            Tomás  Nocetti            ${FC}=${NC}"
 echo -e "${FC}========================================${NC}\n"
 
-printf "> Copying build dependencies..."
-copy_build_dependencies
+printf "> Preparing workspace..."
+prepare_workspace
 echo -e " ${CHECK}\n"
 
 printf "> Building and creating services..."
@@ -80,5 +87,9 @@ echo -e " ${CHECK}\n"
 
 echo -e "${CYANB}> Running with ${REPLICAS} replicas...${NC}"
 docker-compose up --scale alglobo=$REPLICAS
+
+printf "> Cleaning workspace..."
+clean_workspace
+echo -e " ${CHECK}\n"
 
 echo -e "\n${CYANB}Bye bye!${NC}"

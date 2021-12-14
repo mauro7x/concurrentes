@@ -13,7 +13,7 @@ pub struct Config {
     pub port: u16,
     pub bank_addr: SocketAddr,
     pub hotel_addr: SocketAddr,
-    pub airline_addr: SocketAddr
+    pub airline_addr: SocketAddr,
 }
 
 impl Config {
@@ -27,7 +27,7 @@ impl Config {
             port,
             bank_addr,
             hotel_addr,
-            airline_addr
+            airline_addr,
         })
     }
 }

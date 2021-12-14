@@ -1,8 +1,13 @@
 use std::{
     collections::HashMap,
     fs::{self, File, OpenOptions},
+    io::ErrorKind,
     net::UdpSocket,
-    sync::{Arc, MutexGuard},
+    sync::{
+        atomic::{AtomicBool, Ordering::Relaxed},
+        Arc, MutexGuard,
+    },
+    thread,
 };
 
 use crate::{
@@ -10,11 +15,12 @@ use crate::{
     constants::{
         data::{N_PREPARE_RETRIES, WAIT_ALL_RESPONSES_TIMEOUT},
         errors::MUTEX_LOCK_ERROR,
+        general::NONBLOCKING_POLLING_RATE,
         paths::PAYMENTS_TO_PROCESS,
         paths::PAYMENTS_TO_RETRY,
         paths::TEMP_PAYMENTS_TO_PROCESS,
     },
-    protocol::data::recv_msg,
+    protocol::data::unpack_message,
     service_directory::ServiceDirectory,
     thread_utils::{check_threads, safe_spawn},
     tx_log::TxLog,
@@ -23,6 +29,7 @@ use crate::{
         control::{SafeThread, Shared},
         data::{Action, Entity, Message, Responses, Transaction, Tx},
     },
+    utils::fail_randomly,
 };
 
 use csv::{ByteRecord, Reader, Writer};
@@ -35,6 +42,7 @@ pub struct DataPlane {
     tx_log: TxLog,
     services: ServiceDirectory,
     threads: Vec<SafeThread>,
+    stopped: Arc<AtomicBool>,
 }
 
 impl DataPlane {
@@ -51,13 +59,16 @@ impl DataPlane {
         let responses = DataPlane::create_responses();
 
         println!("[DEBUG] (Data) Creating and binding socket...");
+        let socket = UdpSocket::bind(format!("0.0.0.0:{}", port))?;
+        socket.set_nonblocking(true)?;
 
         let mut ret = DataPlane {
             responses: Arc::new(Shared::new(responses)),
-            socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
+            socket,
             tx_log: TxLog::new()?,
             services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr),
             threads: Vec::new(),
+            stopped: Arc::new(AtomicBool::new(false)),
         };
 
         println!("[DEBUG] (Data) Starting Receiver...");
@@ -67,7 +78,6 @@ impl DataPlane {
             DataPlaneReceiver::process_responses,
             &mut ret.threads,
         )?;
-        // thread::spawn(move || receiver.run());
 
         Ok(ret)
     }
@@ -157,6 +167,7 @@ impl DataPlane {
         Ok(DataPlaneReceiver {
             responses: self.responses.clone(),
             socket: self.socket.try_clone()?,
+            stopped: self.stopped.clone(),
         })
     }
 
@@ -208,6 +219,8 @@ impl DataPlane {
         tx: &Transaction,
         action: Action,
     ) -> BoxResult<Option<Action>> {
+        check_threads(&mut self.threads)?;
+        fail_randomly()?;
         self.reset_responses()?;
         self.broadcast_message(tx, action)?;
         self.wait_all_responses(tx.id, action)
@@ -298,21 +311,50 @@ impl DataPlane {
     }
 }
 
+impl Drop for DataPlane {
+    fn drop(&mut self) {
+        println!("[DEBUG] (Data) Destroying...");
+        self.stopped.store(true, Relaxed);
+        while let Some(thread) = self.threads.pop() {
+            thread.joiner.join().expect("Error joining threads");
+        }
+        println!("[DEBUG] (Data) Destroyed successfully");
+    }
+}
+
 // ----------------------------------------------------------------------------
 
 struct DataPlaneReceiver {
     responses: Arc<Shared<Responses>>,
     socket: UdpSocket,
+    stopped: Arc<AtomicBool>,
 }
 
 impl DataPlaneReceiver {
     fn process_responses(&mut self) -> BoxResult<()> {
-        loop {
-            let res = match recv_msg(&self.socket) {
-                Ok((_, res)) => res,
-                Err(err) => panic!("{:#?}", err),
-            };
-            self.process_response(&res)?;
+        while !self.stopped.load(Relaxed) {
+            fail_randomly()?;
+            self.recv_msg()?;
+        }
+
+        Ok(())
+    }
+
+    fn recv_msg(&mut self) -> BoxResult<()> {
+        let mut buf = vec![0; 18];
+
+        match self.socket.recv_from(&mut buf) {
+            Ok(_) => {
+                let msg = unpack_message(&buf)?;
+                self.process_response(&msg)
+            }
+            Err(err) => match err.kind() {
+                ErrorKind::WouldBlock => {
+                    thread::sleep(NONBLOCKING_POLLING_RATE);
+                    Ok(())
+                }
+                _ => Err(err.into()),
+            },
         }
     }
 
