@@ -86,8 +86,8 @@ echo -e " ${CHECK}\n"
 echo -e "${CYANB}> Running with ${REPLICAS} replicas...${NC}"
 docker-compose up --scale alglobo=$REPLICAS
 
-printf "> Cleaning workspace..."
+printf "\n> Cleaning workspace..."
 clean_workspace
 echo -e " ${CHECK}\n"
 
-echo -e "\n${CYANB}Bye bye!${NC}"
+echo -e "${CYANB}Bye bye!${NC}"

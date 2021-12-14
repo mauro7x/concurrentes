@@ -1,9 +1,9 @@
-use std::io::{self, BufRead};
+use lib::manual::run_manual_alglobo;
+
+// ----------------------------------------------------------------------------
 
 fn main() {
-    let stdin = io::stdin();
-    println!("Reading user input..");
-    for line in stdin.lock().lines() {
-        println!("READ: {}", line.unwrap());
+    if let Err(err) = run_manual_alglobo() {
+        println!("[ERROR] {}", err);
     }
 }
