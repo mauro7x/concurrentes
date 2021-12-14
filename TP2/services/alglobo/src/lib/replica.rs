@@ -19,7 +19,6 @@ impl Replica {
         debug!("(ID: -) (Replica) Creating Control...");
         let control = ControlPlane::new()?;
         let id = control.get_my_id()?;
-        fail_randomly()?;
 
         let ret = Replica { id, control };
         debug!("(ID: {}) (Replica) Created successfully", id);
@@ -41,8 +40,6 @@ impl Replica {
     fn inner_run(&mut self) -> BoxResult<()> {
         let mut finished = false;
         while !finished {
-            fail_randomly()?;
-
             if self.control.am_i_leader()? {
                 finished = self.run_as_leader()?;
             } else {
