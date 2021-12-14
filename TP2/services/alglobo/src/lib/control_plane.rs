@@ -103,7 +103,6 @@ impl ControlPlane {
                 "[INFO] (ID: {}) (Control) Sending healthcheck to leader...",
                 self.id
             );
-            fail_randomly()?;
 
             if self.is_leader_alive(&healthcheck_socket)? {
                 println!("[INFO] (ID: {}) (Control) Leader is alive!", self.id);
@@ -289,7 +288,6 @@ impl ControlPlane {
 
         loop {
             check_threads(&mut self.threads)?;
-            fail_randomly()?;
 
             match self.get_leader_addr()? {
                 Some(leader_addr) => {

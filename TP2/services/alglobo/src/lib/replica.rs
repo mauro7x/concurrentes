@@ -28,7 +28,6 @@ impl Replica {
     pub fn run(&mut self) -> BoxResult<()> {
         println!("[INFO] (ID: {}) Replica started", self.id);
         self.inner_run()?;
-        fail_randomly()?;
         self.control.finish()?;
         println!("[INFO] (ID: {}) Terminated gracefully", self.id);
 
