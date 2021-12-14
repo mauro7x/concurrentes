@@ -3,13 +3,15 @@ use std::{
     fs::{self, File},
     net::UdpSocket,
     sync::{Arc, MutexGuard},
-    thread,
+    thread::{self},
 };
 
 use crate::{
     config::data::Config,
     constants::{
-        data::{N_PREPARE_RETRIES, WAIT_ALL_RESPONSES_TIMEOUT}, errors::MUTEX_LOCK_ERROR, paths::PAYMENTS_TO_PROCESS,
+        data::{N_PREPARE_RETRIES, WAIT_ALL_RESPONSES_TIMEOUT},
+        errors::MUTEX_LOCK_ERROR,
+        paths::PAYMENTS_TO_PROCESS,
         paths::TEMP_PAYMENTS_TO_PROCESS,
     },
     protocol::data::recv_msg,
@@ -40,7 +42,7 @@ impl DataPlane {
             port,
             hotel_addr,
             airline_addr,
-            bank_addr
+            bank_addr,
         } = Config::new()?;
 
         println!("[DEBUG] (Data) Creating service responses...");
@@ -51,7 +53,7 @@ impl DataPlane {
             responses: Arc::new(Shared::new(responses)),
             socket: UdpSocket::bind(format!("0.0.0.0:{}", port))?,
             tx_log: TxLog::new()?,
-            services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr)
+            services: ServiceDirectory::new(airline_addr, bank_addr, hotel_addr),
         };
 
         println!("[DEBUG] (Data) Starting Receiver...");
@@ -119,19 +121,27 @@ impl DataPlane {
         self.services.broadcast(&self.socket, msg)
     }
 
-    fn broadcast_until_getting_response_from_all_services(&mut self, tx: Tx, action: Action, n_retries: Option<u32>) -> BoxResult<Action> {
+    fn broadcast_until_getting_response_from_all_services(
+        &mut self,
+        tx: Tx,
+        action: Action,
+        n_retries: Option<u32>,
+    ) -> BoxResult<Action> {
         let mut n_attempts = 0;
         let mut response: Option<Action> = None;
 
         while response.is_none() && (n_retries.is_none() || n_attempts < n_retries.unwrap()) {
             n_attempts += 1;
-            println!("[tx {}] broadcasting {:?} - {} attempt", tx, action, n_attempts);
+            println!(
+                "[tx {}] broadcasting {:?} - {} attempt",
+                tx, action, n_attempts
+            );
             response = self.broadcast_message_and_wait(tx, action)?;
         }
 
         match response {
             Some(action) => Ok(action),
-            None => Ok(Action::Abort)
+            None => Ok(Action::Abort),
         }
     }
 
@@ -150,8 +160,11 @@ impl DataPlane {
 
         match res {
             Ok((_, timeout_result)) if timeout_result.timed_out() => Ok(None),
-            Ok((responses_guard, _)) =>
-                Ok(Some(self.process_result(&responses_guard, tx, expected_action)?)),
+            Ok((responses_guard, _)) => Ok(Some(self.process_result(
+                &responses_guard,
+                tx,
+                expected_action,
+            )?)),
             Err(_) => Ok(None),
         }
     }
@@ -191,7 +204,7 @@ impl DataPlane {
 
     fn process_tx(&mut self, tx: &Transaction) -> BoxResult<Action> {
         // TODO: ESTADO COMPARTIDO
-        match self.tx_log.get(&tx.id) {
+        match self.tx_log.get(&tx.id)? {
             Some(Action::Commit) => self.commit_tx(tx.id),
             Some(Action::Abort) => self.abort_tx(tx.id),
             Some(Action::Prepare) | None => {
@@ -219,7 +232,11 @@ impl DataPlane {
 
     fn prepare_tx(&mut self, tx: Tx) -> BoxResult<Action> {
         self.tx_log.insert(tx, Action::Prepare)?;
-        self.broadcast_until_getting_response_from_all_services(tx, Action::Prepare, Some(N_PREPARE_RETRIES))
+        self.broadcast_until_getting_response_from_all_services(
+            tx,
+            Action::Prepare,
+            Some(N_PREPARE_RETRIES),
+        )
     }
 
     // Abstract
