@@ -265,6 +265,7 @@ impl DataPlane {
     ) -> BoxResult<Action> {
         let mut response_action: Action = expected_action;
         let mut responses_str: String = String::from("");
+        let mut err: BoxResult<Action> = Ok(response_action);
 
         responses_guard.iter().for_each(|(entity, res)| {
             responses_str.push_str(&format!("{:?}: {:?}, ", entity, res));
@@ -274,14 +275,16 @@ impl DataPlane {
                 Some(action) if *action == Action::Abort => response_action = Action::Abort,
                 // should never happen that a service did not respond, since we wait
                 // in the condition variable for all responses not being None
-                None => panic!("process_result: there is a None response that should not be"),
+                None => err = Err("process_result: there is a None response that should not be".into()),
                 // invalid case that should never occur
-                Some(action) => panic!(
-          "process_result: invalid response from server: action: {:?} expected_action {:?}",
-          action, expected_action
+                Some(action) => err = Err(
+          format!("process_result: invalid response from server: action: {:?} expected_action {:?}",
+          action, expected_action).into()
         ),
             };
         });
+
+        if err.is_err() { return err; }
 
         println!(
             "[tx {}] All responses received. Action: {:?} Responses: [{}] Response action: {:?}",
