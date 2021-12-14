@@ -11,17 +11,17 @@ use crate::{
 // ----------------------------------------------------------------------------
 
 pub fn safe_spawn<C: 'static, F: 'static>(
-    c: C,
+    mut c: C,
     f: F,
     threads: &mut Vec<SafeThread>,
 ) -> BoxResult<()>
 where
     C: std::marker::Send,
-    F: Fn(C) -> BoxResult<()> + std::marker::Send,
+    F: Fn(&mut C) -> BoxResult<()> + std::marker::Send,
 {
     let (tx, rx) = mpsc::channel();
     let joiner = thread::spawn(move || {
-        match f(c) {
+        match f(&mut c) {
             Ok(_) => tx.send(THREAD_OK.to_string()),
             Err(err) => tx.send(err.to_string()),
         }

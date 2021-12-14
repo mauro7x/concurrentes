@@ -351,7 +351,7 @@ impl Control {
 
     // Active object methods (run in their own thread)
 
-    fn receiver(mut self) -> BoxResult<()> {
+    fn receiver(&mut self) -> BoxResult<()> {
         let mut message: Message = NEW_MESSAGE;
 
         loop {
@@ -393,7 +393,7 @@ impl Control {
         Ok(())
     }
 
-    fn handle_election(&self, from: SocketAddr, id: Id) -> BoxResult<()> {
+    fn handle_election(&mut self, from: SocketAddr, id: Id) -> BoxResult<()> {
         println!(
             "[DEBUG] (ID: {}) (Control:Receiver) ELECTION from {} (ID: {})",
             self.id, from, id
@@ -402,13 +402,8 @@ impl Control {
             self.socket.send_to(&self.msg_with_id(OK), from)?;
 
             if !self.is_finding_leader()? {
-                let mut cloned = self.clone()?;
-                thread::spawn(move || {
-                    if let Err(err) = cloned.find_new_leader() {
-                        // TODO: Avoid this panic, propagate!
-                        panic!("[ERROR] find_new_leader inside thread crashed: {}", err)
-                    }
-                });
+                let cloned = self.clone()?;
+                safe_spawn(cloned, Self::find_new_leader, &mut self.threads)?;
             }
         }
 
