@@ -39,7 +39,7 @@ function copy_build_dependencies {
 
 function copy_runtime_dependencies {
   # Payments source
-  rm -rf ./.tmp &&
+  # rm -rf ./.tmp &&
   mkdir -p "./.tmp" &&
   cp "${PAYMENTS_FILE}" ./.tmp/payments.csv &&
   cp "${ACCOUNTS_FILE}" ./.tmp/accounts.csv &&
