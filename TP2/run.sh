@@ -48,6 +48,7 @@ function prepare_workspace {
 }
 
 function clean_workspace {
+  dcmp down --remove-orphans
   rm -rf ./.tmp
 }
 
