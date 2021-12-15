@@ -10,7 +10,7 @@ use crate::{
     config::Config,
     constants::POLLING_SLEEP_TIME,
     node::Node,
-    protocol::{Opcode, ACCEPTED, DEAD, EOB, FINISHED, NEW, PING, REGISTER, REJECTED},
+    protocol::{Opcode, ACCEPTED, DEAD, EOB, FINISHED, NEW, REGISTER, REJECTED},
     types::*,
     utils::{encode, msg_from, next},
 };
@@ -100,7 +100,11 @@ impl Directory {
     fn register_handler(&mut self, ip: Ipv4Addr, mut stream: TcpStream) -> BoxResult<()> {
         info!("Register request from {}", ip);
 
-        if self.full() && !self.remove_dead_nodes()? {
+        if self.full() {
+            error!(
+                "We are full! max_nodes: {}, used_ids: {:?}, self.nodes: {:?}",
+                self.max_nodes, self.used_ids, self.nodes
+            );
             info!("{} connection rejected since max_nodes being used", ip);
 
             if let Err(err) = stream.write_all(&REJECTED) {
@@ -282,29 +286,6 @@ impl Directory {
         }
 
         id
-    }
-
-    fn remove_dead_nodes(&mut self) -> BoxResult<bool> {
-        let mut nodes = vec![];
-        let mut dead_nodes = vec![];
-
-        while let Some(mut node) = self.nodes.pop() {
-            match node.stream.write_all(&PING) {
-                Ok(_) => nodes.push(node),
-                Err(_) => {
-                    self.used_ids.remove(&node.id);
-                    dead_nodes.push(node);
-                }
-            };
-        }
-        self.nodes = nodes;
-
-        let found_dead_nodes = !dead_nodes.is_empty();
-        if found_dead_nodes {
-            self.broadcast_dead(dead_nodes)?;
-        };
-
-        Ok(found_dead_nodes)
     }
 
     fn print(&self) {
