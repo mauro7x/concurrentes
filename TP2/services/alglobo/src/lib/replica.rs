@@ -2,7 +2,6 @@ use crate::{
     control_plane::ControlPlane,
     data_plane::DataPlane,
     types::common::{BoxResult, Id},
-    utils::fail_randomly,
 };
 
 use log::*;
@@ -19,7 +18,6 @@ impl Replica {
         debug!("(ID: -) (Replica) Creating Control...");
         let control = ControlPlane::new()?;
         let id = control.get_my_id()?;
-        fail_randomly()?;
 
         let ret = Replica { id, control };
         debug!("(ID: {}) (Replica) Created successfully", id);
@@ -41,8 +39,6 @@ impl Replica {
     fn inner_run(&mut self) -> BoxResult<()> {
         let mut finished = false;
         while !finished {
-            fail_randomly()?;
-
             if self.control.am_i_leader()? {
                 finished = self.run_as_leader()?;
             } else {
@@ -56,10 +52,8 @@ impl Replica {
     fn run_as_leader(&mut self) -> BoxResult<bool> {
         let mut data_plane = DataPlane::new(false)?;
         let mut transactions_pending = true;
-        fail_randomly()?;
 
         while self.control.am_i_leader()? && transactions_pending {
-            fail_randomly()?;
             transactions_pending = data_plane.process_transaction_from_file()?;
         }
 
