@@ -47,6 +47,7 @@ pub struct ControlPlane {
     got_ok: Arc<Shared<bool>>,
     threads: Vec<SafeThread>,
     stopped: Arc<AtomicBool>,
+    am_i_main_thread: bool,
 }
 
 impl ControlPlane {
@@ -74,13 +75,18 @@ impl ControlPlane {
             got_ok: Arc::new(Shared::new(false)),
             threads: Vec::new(),
             stopped: Arc::new(AtomicBool::new(false)),
+            am_i_main_thread: true,
         };
-
-        ret.init_leader()?;
 
         debug!("(ID: {}) Starting Receiver...", id);
         let cloned = ret.clone()?;
         safe_spawn(cloned, Self::receiver, &mut ret.threads)?;
+
+        info!("(ID: {}) Finding current leader...", id);
+        ret.init_leader()?;
+        while ret.get_leader_id_with_timeout()?.is_none() {
+            ret.force_election()?;
+        }
 
         Ok(ret)
     }
@@ -92,8 +98,6 @@ impl ControlPlane {
     }
 
     pub fn am_i_leader(&mut self) -> BoxResult<bool> {
-        check_threads(&mut self.threads)?;
-
         Ok(self.id == self.get_leader_id()?)
     }
 
@@ -108,7 +112,7 @@ impl ControlPlane {
                 info!("(ID: {}) Leader is alive!", self.id);
                 thread::sleep(REPLICA_SLEEP_TIME);
             } else {
-                info!("(ID: {}) Leader not responding, start election", self.id);
+                info!("(ID: {}) Leader not responding", self.id);
                 self.find_new_leader()?;
             }
         }
@@ -137,6 +141,7 @@ impl ControlPlane {
             got_ok: self.got_ok.clone(),
             threads: Vec::new(),
             stopped: self.stopped.clone(),
+            am_i_main_thread: false,
         };
 
         Ok(ret)
@@ -147,44 +152,25 @@ impl ControlPlane {
     }
 
     fn init_leader(&mut self) -> BoxResult<()> {
-        info!("(ID: {}) Finding current leader...", self.id);
-        let unshared_socket = UdpSocket::bind("0.0.0.0:0")?;
+        if !self.is_finding_leader()? {
+            // We have a leader
+            return Ok(());
+        };
 
-        {
-            let msg = self.msg_with_id(GET_LEADER);
-            let mut directory = self.directory()?;
+        let msg = self.msg_with_id(GET_LEADER);
+        let mut directory = self.directory()?;
 
-            let nodes = directory.get_updated_nodes()?;
-            if nodes.is_empty() {
-                // I am the only node in the network,
-                // make myself leader without asking
-                info!("(ID: {}) No more nodes found, starting as leader", self.id);
-                self.set_new_leader(self.id)?;
-                return Ok(());
-            }
-
-            for ip in nodes.values() {
-                unshared_socket.send_to(&msg, self.ip2addr(ip))?;
-            }
+        let nodes = directory.get_updated_nodes()?;
+        if nodes.is_empty() {
+            // I am the only node in the network,
+            // make myself leader without asking
+            info!("(ID: {}) No more nodes found, starting as leader", self.id);
+            self.set_new_leader(self.id)?;
+            return Ok(());
         }
 
-        let mut message: Message = NEW_MESSAGE;
-        unshared_socket.set_read_timeout(Some(GET_LEADER_TIMEOUT))?;
-        if unshared_socket.recv_from(&mut message).is_ok() {
-            let [opcode, id] = message;
-            match opcode {
-                LEADER => {
-                    info!("(ID: {}) Found leader with ID: {}", self.id, id);
-                    self.set_new_leader(id)?;
-                }
-                _ => return Err("Unknown response to GET_LEADER received".into()),
-            }
-        } else {
-            warn!(
-                "(ID: {}) Nobody responded, announcing myself as leader",
-                self.id
-            );
-            self.make_me_leader()?;
+        for ip in nodes.values() {
+            self.socket.send_to(&msg, self.ip2addr(ip))?;
         }
 
         Ok(())
@@ -192,12 +178,18 @@ impl ControlPlane {
 
     fn find_new_leader(&mut self) -> BoxResult<()> {
         check_threads(&mut self.threads)?;
-
         if self.is_finding_leader()? {
             return Ok(());
         };
 
-        info!("(ID: {}) Finding new leader", self.id);
+        self.force_election()?;
+
+        Ok(())
+    }
+
+    fn force_election(&mut self) -> BoxResult<()> {
+        info!("(ID: {}) Starting election", self.id);
+
         self.set_shared_value(self.got_ok.clone(), false)?;
         self.set_shared_value(self.leader_id.clone(), None)?;
 
@@ -207,7 +199,7 @@ impl ControlPlane {
             self.make_me_leader()?;
         } else {
             self.get_leader_id()?;
-        }
+        };
 
         Ok(())
     }
@@ -249,7 +241,7 @@ impl ControlPlane {
         Ok(true)
     }
 
-    fn make_me_leader(&mut self) -> BoxResult<()> {
+    fn make_me_leader(&self) -> BoxResult<()> {
         info!("(ID: {}) Announcing as leader", self.id);
         let msg = self.msg_with_id(LEADER);
         let mut directory = self.directory()?;
@@ -259,7 +251,9 @@ impl ControlPlane {
             self.socket.send_to(&msg, self.ip2addr(ip))?;
         }
 
+        info!("(ID: {}) Setting new leader...", self.id);
         self.set_new_leader(self.id)?;
+        info!("(ID: {}) Set new leader!", self.id);
 
         Ok(())
     }
@@ -287,6 +281,17 @@ impl ControlPlane {
                 None => return Ok(false),
             };
         }
+    }
+
+    fn non_blocking_am_i_leader(&self) -> BoxResult<bool> {
+        let leader_id = *self.leader_id.mutex.lock().map_err(|_| MUTEX_LOCK_ERROR)?;
+        let value = match leader_id {
+            Some(id) if id == self.id => true,
+            Some(_) => false,
+            None => false,
+        };
+
+        Ok(value)
     }
 
     // Helpers
@@ -317,21 +322,30 @@ impl ControlPlane {
             .is_none())
     }
 
-    fn get_leader_id(&self) -> BoxResult<Id> {
-        let id = self
-            .leader_id
-            .cv
-            .wait_while(
-                self.leader_id.mutex.lock().map_err(|_| MUTEX_LOCK_ERROR)?,
-                |leader_id| leader_id.is_none(),
-            )
-            .map_err(|_| CV_WAIT_ERROR)?
-            .ok_or("Leader ID is awkwardly none")?;
-
-        Ok(id)
+    fn get_leader_id(&mut self) -> BoxResult<Id> {
+        loop {
+            check_threads(&mut self.threads)?;
+            if let Some(id) = self.get_leader_id_with_timeout()? {
+                return Ok(id);
+            }
+        }
     }
 
-    fn get_leader_addr(&self) -> BoxResult<Option<SocketAddr>> {
+    fn get_leader_id_with_timeout(&self) -> BoxResult<Option<Id>> {
+        let (id, _timeout) = self
+            .leader_id
+            .cv
+            .wait_timeout_while(
+                self.leader_id.mutex.lock().map_err(|_| MUTEX_LOCK_ERROR)?,
+                GET_LEADER_TIMEOUT,
+                |leader_id| leader_id.is_none(),
+            )
+            .map_err(|_| CV_WAIT_ERROR)?;
+
+        Ok(*id)
+    }
+
+    fn get_leader_addr(&mut self) -> BoxResult<Option<SocketAddr>> {
         let leader_id = self.get_leader_id()?;
         let mut directory = self.directory()?;
         directory.update()?;
@@ -351,7 +365,7 @@ impl ControlPlane {
 
     fn receiver(&mut self) -> BoxResult<()> {
         while !self.stopped.load(Relaxed) {
-
+            check_threads(&mut self.threads)?;
             self.recv_msg()?;
         }
 
@@ -432,7 +446,8 @@ impl ControlPlane {
             "(ID: {}) (Control:Receiver) GET_LEADER from {} (ID: {})",
             self.id, from, id
         );
-        if self.am_i_leader()? {
+
+        if self.non_blocking_am_i_leader()? {
             self.socket.send_to(&self.msg_with_id(LEADER), from)?;
         }
 
@@ -451,11 +466,21 @@ impl ControlPlane {
 
 impl Drop for ControlPlane {
     fn drop(&mut self) {
-        debug!("(ID: {}) Destroying...", self.id);
-        self.stopped.store(true, Relaxed);
+        debug!(
+            "(ID: {}) Destroying... (main_thread: {})",
+            self.id, self.am_i_main_thread
+        );
+
+        if self.am_i_main_thread {
+            self.stopped.store(true, Relaxed);
+        }
         while let Some(thread) = self.threads.pop() {
             thread.joiner.join().expect("Error joining threads");
         }
-        debug!("(ID: {}) Destroyed successfully", self.id);
+
+        debug!(
+            "(ID: {}) Destroyed successfully (main_thread: {})",
+            self.id, self.am_i_main_thread
+        );
     }
 }
