@@ -29,6 +29,7 @@ use crate::{
         common::{BoxResult, Id},
         control::{SafeThread, Shared},
     },
+    utils::fail_randomly,
 };
 
 use log::*;
@@ -62,6 +63,7 @@ impl ControlPlane {
         debug!("(ID: -) Creating Directory...");
         let directory = Directory::new(directory_addr)?;
         let id = directory.get_my_id();
+        fail_randomly()?;
 
         debug!("(ID: {}) Creating and binding socket...", id);
         let socket = UdpSocket::bind(format!("0.0.0.0:{}", port))?;
@@ -102,6 +104,7 @@ impl ControlPlane {
     pub fn healthcheck_leader(&mut self) -> BoxResult<()> {
         let healthcheck_socket = UdpSocket::bind("0.0.0.0:0")?;
         healthcheck_socket.set_read_timeout(Some(HEALTHCHECK_TIMEOUT))?;
+        fail_randomly()?;
 
         while !self.am_i_leader()? {
             info!("(ID: {}) Sending healthcheck to leader...", self.id);
@@ -362,6 +365,7 @@ impl ControlPlane {
 
     fn receiver(&mut self) -> BoxResult<()> {
         while !self.stopped.load(Relaxed) {
+            fail_randomly()?;
             self.recv_msg()?;
         }
 
