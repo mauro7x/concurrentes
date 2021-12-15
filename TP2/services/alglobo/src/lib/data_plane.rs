@@ -468,3 +468,11 @@ impl DataPlaneReceiver {
         }
     }
 }
+
+impl Drop for DataPlaneReceiver {
+    fn drop(&mut self) {
+        debug!("Destroying (receiver)...");
+        self.stopped.store(true, Relaxed);
+        debug!("Destroyed receiver successfully");
+    }
+}
