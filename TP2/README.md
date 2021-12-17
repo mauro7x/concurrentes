@@ -99,4 +99,4 @@ El sistema es configurable mediante variables de entorno, que pueden encontrarse
 A continuación se lista documentación relevante (disponible en nuestra sección [`/docs`](./docs)):
 
 - [Enunciado](./docs/Enunciado.md)
-- Informe: _pdf_ (WIP)
+- [Informe](./docs/Informe.pdf)
